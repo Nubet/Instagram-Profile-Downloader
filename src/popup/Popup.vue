@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { sendMessage } from 'webext-bridge/popup'
+import PopupIcon from './PopupIcon.vue'
 import PopupLogo from './PopupLogo.vue'
 import { selectScrapedPosts } from '~/features/profileDownload/application/selectScrapedPosts'
 import type { DownloadPostSelection } from '~/features/profileDownload/application/selectScrapedPosts'
@@ -472,7 +473,7 @@ onBeforeUnmount(() => {
         aria-label="Toggle settings"
         @click="isSettingsOpen = !isSettingsOpen"
       >
-        <div class="i-lucide-settings mx-auto block text-[16px]" />
+        <PopupIcon name="settings" class="mx-auto block text-[16px]" />
       </button>
 
       <div class="absolute bottom-0 left-0 w-full h-[1px] bg-[#e5e5ea]">
@@ -547,7 +548,7 @@ onBeforeUnmount(() => {
               Status
             </h2>
             <div class="transition-opacity duration-300" :class="(isBusy || hasActiveSession) ? 'opacity-100' : 'opacity-0'">
-              <div class="i-lucide-loader-circle animate-spin text-[14px] text-[#007aff]" />
+              <PopupIcon name="loader" class="text-[14px] text-[#007aff]" />
             </div>
           </div>
           <p
@@ -592,8 +593,8 @@ onBeforeUnmount(() => {
         :disabled="isBusy && !hasActiveSession"
         @click="handleAction"
       >
-        <div v-if="isBusy" class="i-lucide-loader-2 animate-spin text-[18px]" />
-        <div v-else-if="hasActiveSession" class="i-lucide-square text-[14px] fill-current" />
+        <PopupIcon v-if="isBusy" name="loader" class="text-[18px]" />
+        <PopupIcon v-else-if="hasActiveSession" name="stop" class="text-[14px]" />
         {{ actionLabel }}
       </button>
 
@@ -658,7 +659,7 @@ onBeforeUnmount(() => {
                     class="w-[22px] h-[22px] rounded-full border transition-all flex items-center justify-center shadow-sm"
                     :class="manualSelectionSet.has(post.id) ? 'bg-[#007aff] border-[#007aff]' : 'border-[#c7c7cc] bg-white group-hover:border-[#a1a1a6]'"
                   >
-                    <div v-if="manualSelectionSet.has(post.id)" class="i-lucide-check text-white text-[14px] font-bold" />
+                    <PopupIcon v-if="manualSelectionSet.has(post.id)" name="check" class="text-white text-[14px]" />
                   </div>
                 </div>
 
@@ -695,8 +696,8 @@ onBeforeUnmount(() => {
             @click="downloadSelectedPosts"
           >
             <div v-if="isBusy" class="absolute inset-0 bg-white/20 animate-shimmer" />
-            <div v-if="isBusy" class="i-lucide-loader-2 animate-spin text-[18px] relative z-10" />
-            <div v-else class="i-lucide-download text-[18px] relative z-10 transition-transform group-hover:-translate-y-[1px]" />
+            <PopupIcon v-if="isBusy" name="loader" class="relative z-10 text-[18px]" />
+            <PopupIcon v-else name="download" class="relative z-10 text-[18px] transition-transform group-hover:-translate-y-[1px]" />
             <span class="relative z-10">{{ downloadSelectionLabel }}</span>
           </button>
         </div>
@@ -705,7 +706,7 @@ onBeforeUnmount(() => {
       <details class="group mt-4 [&_summary::-webkit-details-marker]:hidden">
         <summary class="flex justify-between items-center cursor-pointer list-none text-[12px] font-semibold uppercase tracking-wider text-[#86868b] hover:text-[#1d1d1f] transition-colors py-2 px-1">
           <span>Session Log</span>
-          <div class="i-lucide-chevron-down text-[16px] transform transition-transform duration-200 group-open:rotate-180" />
+          <PopupIcon name="chevron-down" class="text-[16px] transform transition-transform duration-200 group-open:rotate-180" />
         </summary>
         <div class="mt-2 bg-[#f2f2f7] rounded-[12px] p-3 text-[11px] font-mono text-[#86868b] max-h-[160px] overflow-y-auto custom-scrollbar border border-black/5 shadow-inner">
           <p v-if="visibleDebugLog.length === 0" class="text-center py-4 text-[#a1a1a6]">
