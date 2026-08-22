@@ -472,7 +472,7 @@ onBeforeUnmount(() => {
         aria-label="Toggle settings"
         @click="isSettingsOpen = !isSettingsOpen"
       >
-        <div class="i-lucide-settings-2 mx-auto text-[16px]" />
+        <div class="i-lucide-settings mx-auto block text-[16px]" />
       </button>
 
       <div class="absolute bottom-0 left-0 w-full h-[1px] bg-[#e5e5ea]">
