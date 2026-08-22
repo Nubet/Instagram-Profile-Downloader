@@ -7,6 +7,12 @@ import { extensionMessage } from '~/features/profileDownload/contracts/messages'
 import { validateInstagramProfileUrl } from '~/features/profileDownload/domain/profileDownload'
 import type { ScrapedPost } from '~/features/profileDownload/domain/profileDownload'
 import {
+  defaultProfileScrapeSettings,
+  profileScrapeSettingsStorageKey,
+  resolveProfileScrapeSettings,
+} from '~/features/profileDownload/domain/scrapePolicy'
+import type { ProfileScrapeSettings } from '~/features/profileDownload/domain/scrapePolicy'
+import {
   createIdleProgress,
   isActiveScrapePhase,
 } from '~/features/profileDownload/presentation/scrapeState'
@@ -17,10 +23,12 @@ const posts = ref<ScrapedPost[]>([])
 const debugLog = ref<ScrapeDebugEntry[]>([])
 const activeTabId = ref<number | null>(null)
 const isBusy = ref(false)
+const isSettingsOpen = ref(false)
 const selectionMode = ref<'all' | 'range' | 'manual'>('all')
 const rangeStart = ref('1')
 const rangeEnd = ref('')
 const manuallySelectedPostIds = ref<string[]>([])
+const scrapeSettings = ref(createScrapeSettingsDraft())
 let statusPollTimer: number | null = null
 
 const hasActiveSession = computed(() => {
@@ -217,7 +225,10 @@ async function startProfileDownload(tabId: number) {
 
     const response = await sendMessage(
       extensionMessage.startProfileDownload,
-      { profileUrl: validation.profileUrl },
+      {
+        profileUrl: validation.profileUrl,
+        settings: scrapeSettings.value,
+      },
       { context: 'content-script', tabId },
     )
 
@@ -374,7 +385,34 @@ function formatCaptionPreview(caption: string) {
   return normalized.length > 88 ? `${normalized.slice(0, 85)}...` : normalized
 }
 
+function createScrapeSettingsDraft(settings: Partial<ProfileScrapeSettings> = defaultProfileScrapeSettings): ProfileScrapeSettings {
+  const resolved = resolveProfileScrapeSettings(settings)
+
+  return {
+    scrollDelayRange: { ...resolved.scrollDelayRange },
+    cooldownDelayRange: { ...resolved.cooldownDelayRange },
+    cooldownBatchSize: resolved.cooldownBatchSize,
+  }
+}
+
+async function loadScrapeSettings() {
+  const storedSettings = await browser.storage.local.get(profileScrapeSettingsStorageKey)
+  scrapeSettings.value = createScrapeSettingsDraft(storedSettings[profileScrapeSettingsStorageKey] as Partial<ProfileScrapeSettings> | undefined)
+}
+
+async function saveScrapeSettings() {
+  const normalizedSettings = createScrapeSettingsDraft(scrapeSettings.value)
+  scrapeSettings.value = normalizedSettings
+  await browser.storage.local.set({ [profileScrapeSettingsStorageKey]: normalizedSettings })
+}
+
+async function resetScrapeSettings() {
+  scrapeSettings.value = createScrapeSettingsDraft()
+  await saveScrapeSettings()
+}
+
 onMounted(async () => {
+  await loadScrapeSettings()
   await refreshPopupState()
 
   statusPollTimer = window.setInterval(() => {
@@ -400,12 +438,68 @@ onBeforeUnmount(() => {
         </h1>
       </div>
 
+      <button
+        class="ml-auto h-9 w-9 rounded-[11px] border border-[#e5e5ea] bg-white/80 text-[#86868b] transition-all hover:border-[#d1d1d6] hover:text-[#1d1d1f] hover:bg-white"
+        :class="isSettingsOpen ? 'text-[#007aff] border-[#007aff]/20 bg-[#007aff]/[0.04]' : ''"
+        aria-label="Toggle settings"
+        @click="isSettingsOpen = !isSettingsOpen"
+      >
+        <div class="i-lucide-settings-2 mx-auto text-[16px]" />
+      </button>
+
       <div class="absolute bottom-0 left-0 w-full h-[1px] bg-[#e5e5ea]">
         <div v-if="isBusy || hasActiveSession" class="h-full bg-[#007aff] w-full origin-left animate-progress" />
       </div>
     </header>
 
     <div class="p-5 space-y-5">
+      <section v-if="isSettingsOpen" class="rounded-[16px] border border-[#e5e5ea] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-[15px] font-semibold tracking-tight text-[#1d1d1f]">
+              Fetch Settings
+            </h2>
+            <p class="mt-1 text-[12px] leading-snug text-[#86868b]">
+              Lower values speed up large profile fetches.
+            </p>
+          </div>
+          <button class="text-[12px] font-semibold text-[#007aff] transition-opacity hover:opacity-80" @click="resetScrapeSettings">
+            Reset
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="col-span-2">
+            <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">Cooldown every posts</label>
+            <input v-model.number="scrapeSettings.cooldownBatchSize" type="number" min="1" class="w-full rounded-[10px] border border-transparent bg-[#f2f2f7] px-3 py-2.5 text-[14px] font-medium text-[#1d1d1f] outline-none transition-all focus:border-[#007aff] focus:bg-white focus:ring-4 focus:ring-[#007aff]/10">
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">Cooldown min ms</label>
+            <input v-model.number="scrapeSettings.cooldownDelayRange.min" type="number" min="1" step="100" class="w-full rounded-[10px] border border-transparent bg-[#f2f2f7] px-3 py-2.5 text-[14px] font-medium text-[#1d1d1f] outline-none transition-all focus:border-[#007aff] focus:bg-white focus:ring-4 focus:ring-[#007aff]/10">
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">Cooldown max ms</label>
+            <input v-model.number="scrapeSettings.cooldownDelayRange.max" type="number" min="1" step="100" class="w-full rounded-[10px] border border-transparent bg-[#f2f2f7] px-3 py-2.5 text-[14px] font-medium text-[#1d1d1f] outline-none transition-all focus:border-[#007aff] focus:bg-white focus:ring-4 focus:ring-[#007aff]/10">
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">Scroll min ms</label>
+            <input v-model.number="scrapeSettings.scrollDelayRange.min" type="number" min="1" step="100" class="w-full rounded-[10px] border border-transparent bg-[#f2f2f7] px-3 py-2.5 text-[14px] font-medium text-[#1d1d1f] outline-none transition-all focus:border-[#007aff] focus:bg-white focus:ring-4 focus:ring-[#007aff]/10">
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">Scroll max ms</label>
+            <input v-model.number="scrapeSettings.scrollDelayRange.max" type="number" min="1" step="100" class="w-full rounded-[10px] border border-transparent bg-[#f2f2f7] px-3 py-2.5 text-[14px] font-medium text-[#1d1d1f] outline-none transition-all focus:border-[#007aff] focus:bg-white focus:ring-4 focus:ring-[#007aff]/10">
+          </div>
+        </div>
+
+        <button class="btn w-full rounded-[12px] bg-[#1d1d1f] px-4 py-3 text-[14px] font-semibold text-white transition-all hover:bg-black" @click="saveScrapeSettings">
+          Save Settings
+        </button>
+      </section>
+
       <section
         class="rounded-[16px] bg-white border p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] relative overflow-hidden transition-all duration-300"
         :class="(isBusy || hasActiveSession) ? 'border-[#007aff]/30 shadow-[0_4px_12px_rgba(0,122,255,0.08)]' : 'border-[#e5e5ea]'"

@@ -28,6 +28,8 @@ export const defaultProfileScrapeSettings: ProfileScrapeSettings = {
   cooldownBatchSize: profileScrapePolicy.cooldownBatchSize,
 }
 
+export const profileScrapeSettingsStorageKey = 'profileScrapeSettings'
+
 export function resolveProfileScrapeSettings(settings?: Partial<ProfileScrapeSettings>): ProfileScrapeSettings {
   const scrollMin = normalizePositiveInteger(settings?.scrollDelayRange?.min, defaultProfileScrapeSettings.scrollDelayRange.min)
   const scrollMax = normalizePositiveInteger(settings?.scrollDelayRange?.max, defaultProfileScrapeSettings.scrollDelayRange.max)
