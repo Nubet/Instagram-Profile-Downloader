@@ -1,4 +1,5 @@
 import type { DownloadSession, ScrapedPost } from '../domain/profileDownload'
+import type { ProfileScrapeSettings } from '../domain/scrapePolicy'
 import type { ScrapeDebugEntry, ScrapeProgress } from '../presentation/scrapeState'
 import type { DownloadPostSelection } from '../application/selectScrapedPosts'
 import type { DownloadBatch, ScrapeFailure } from '~/features/downloads/domain/download'
@@ -19,6 +20,7 @@ export interface GetScrapeStatusResponse {
 
 export interface StartProfileDownloadRequest {
   profileUrl: string
+  settings?: Partial<ProfileScrapeSettings>
 }
 
 export interface StartProfileDownloadResponse {

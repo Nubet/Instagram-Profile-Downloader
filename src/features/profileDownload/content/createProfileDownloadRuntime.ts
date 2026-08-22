@@ -4,12 +4,15 @@ import { selectScrapedPosts } from '../application/selectScrapedPosts'
 import { startDownloadSession } from '../application/startDownloadSession'
 import { extensionMessage } from '../contracts/messages'
 import {
+  defaultProfileScrapeSettings,
   getRandomDelay,
   hasReachedProfileEnd,
   profileScrapePolicy,
+  resolveProfileScrapeSettings,
   shouldApplyBatchCooldown,
 } from '../domain/scrapePolicy'
 import type { DownloadSession, ScrapedPost } from '../domain/profileDownload'
+import type { ProfileScrapeSettings } from '../domain/scrapePolicy'
 import { extractProfilePostsFromDocument } from '../infrastructure/extractProfilePostsFromDocument'
 import { fetchInstagramPostCaption } from '../infrastructure/fetchInstagramPostCaption'
 import {
@@ -53,6 +56,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
   let lastCooldownPostCount = 0
   let activeRunId = 0
   let debugLog: ScrapeDebugEntry[] = []
+  let activeSettings: ProfileScrapeSettings = defaultProfileScrapeSettings
 
   function getScrapeStatus(): GetScrapeStatusResponse {
     return { progress, debugLog, posts: collectedPosts }
@@ -74,6 +78,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
     activeRunId += 1
     const runId = activeRunId
     isStopRequested = false
+    activeSettings = resolveProfileScrapeSettings(request.settings)
     seenPostIds = new Set()
     debugLog = []
     lastCooldownPostCount = 0
@@ -219,7 +224,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
           return
         }
 
-        const scrollDelay = getRandomDelay(profileScrapePolicy.scrollDelayRange.min, profileScrapePolicy.scrollDelayRange.max)
+        const scrollDelay = getRandomDelay(activeSettings.scrollDelayRange.min, activeSettings.scrollDelayRange.max)
         addDebugLog('info', 'session', 'Waiting before next scroll.', `delayMs=${scrollDelay}`)
         await wait(scrollDelay)
 
@@ -249,9 +254,9 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
           progress = getScrapeLoopProgress(session, scrapedPosts.length, 'scraping', `No new posts found. Retry ${attemptsWithoutNewPosts}/${profileScrapePolicy.maxAttemptsWithoutNewPosts}.`)
         }
 
-        if (shouldApplyBatchCooldown(scrapedPosts.length, lastCooldownPostCount, profileScrapePolicy.cooldownBatchSize)) {
+        if (shouldApplyBatchCooldown(scrapedPosts.length, lastCooldownPostCount, activeSettings.cooldownBatchSize)) {
           lastCooldownPostCount = scrapedPosts.length
-          const cooldownDelay = getRandomDelay(profileScrapePolicy.cooldownDelayRange.min, profileScrapePolicy.cooldownDelayRange.max)
+          const cooldownDelay = getRandomDelay(activeSettings.cooldownDelayRange.min, activeSettings.cooldownDelayRange.max)
           progress = getScrapeLoopProgress(session, scrapedPosts.length, 'cooldown', `Cooling down after ${scrapedPosts.length} posts.`)
           addDebugLog('info', 'session', 'Applying cooldown after batch threshold.', `delayMs=${cooldownDelay}, posts=${scrapedPosts.length}`)
           await wait(cooldownDelay)
@@ -380,6 +385,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
     seenPostIds = new Set()
     isStopRequested = false
     lastCooldownPostCount = 0
+    activeSettings = defaultProfileScrapeSettings
   }
 
   function addDebugLog(level: ScrapeDebugEntry['level'], scope: ScrapeDebugEntry['scope'], message: string, details?: string) {

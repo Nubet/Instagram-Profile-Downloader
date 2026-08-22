@@ -3,6 +3,12 @@ export interface DelayRange {
   max: number
 }
 
+export interface ProfileScrapeSettings {
+  scrollDelayRange: DelayRange
+  cooldownDelayRange: DelayRange
+  cooldownBatchSize: number
+}
+
 export const profileScrapePolicy = {
   scrollDelayRange: { min: 2000, max: 5500 },
   cooldownDelayRange: { min: 60000, max: 120000 },
@@ -15,6 +21,31 @@ export const profileScrapePolicy = {
   debugLogLimit: 120,
   enableEndOfProfileRetries: false,
 } as const
+
+export const defaultProfileScrapeSettings: ProfileScrapeSettings = {
+  scrollDelayRange: { ...profileScrapePolicy.scrollDelayRange },
+  cooldownDelayRange: { ...profileScrapePolicy.cooldownDelayRange },
+  cooldownBatchSize: profileScrapePolicy.cooldownBatchSize,
+}
+
+export function resolveProfileScrapeSettings(settings?: Partial<ProfileScrapeSettings>): ProfileScrapeSettings {
+  const scrollMin = normalizePositiveInteger(settings?.scrollDelayRange?.min, defaultProfileScrapeSettings.scrollDelayRange.min)
+  const scrollMax = normalizePositiveInteger(settings?.scrollDelayRange?.max, defaultProfileScrapeSettings.scrollDelayRange.max)
+  const cooldownMin = normalizePositiveInteger(settings?.cooldownDelayRange?.min, defaultProfileScrapeSettings.cooldownDelayRange.min)
+  const cooldownMax = normalizePositiveInteger(settings?.cooldownDelayRange?.max, defaultProfileScrapeSettings.cooldownDelayRange.max)
+
+  return {
+    scrollDelayRange: {
+      min: Math.min(scrollMin, scrollMax),
+      max: Math.max(scrollMin, scrollMax),
+    },
+    cooldownDelayRange: {
+      min: Math.min(cooldownMin, cooldownMax),
+      max: Math.max(cooldownMin, cooldownMax),
+    },
+    cooldownBatchSize: normalizePositiveInteger(settings?.cooldownBatchSize, defaultProfileScrapeSettings.cooldownBatchSize),
+  }
+}
 
 export function getRandomDelay(minMs: number, maxMs: number, random = Math.random): number {
   if (maxMs < minMs)
@@ -37,4 +68,11 @@ export function shouldApplyBatchCooldown(discoveredPostCount: number, previousCo
 
 export function hasReachedProfileEnd(attemptsWithoutNewPosts: number, maxAttemptsWithoutNewPosts: number): boolean {
   return attemptsWithoutNewPosts >= maxAttemptsWithoutNewPosts
+}
+
+function normalizePositiveInteger(value: number | undefined, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0)
+    return fallback
+
+  return value
 }
