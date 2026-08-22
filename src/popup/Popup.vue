@@ -41,6 +41,8 @@ const canShowSelectionPanel = computed(() => {
   return hasFetchedPosts.value && !hasActiveSession.value
 })
 
+const scrapeSettingsError = computed(() => getScrapeSettingsValidationError(scrapeSettings.value))
+
 const actionLabel = computed(() => {
   if (isBusy.value)
     return hasActiveSession.value ? 'Stopping fetch...' : 'Fetching posts...'
@@ -227,7 +229,7 @@ async function startProfileDownload(tabId: number) {
       extensionMessage.startProfileDownload,
       {
         profileUrl: validation.profileUrl,
-        settings: scrapeSettings.value,
+        settings: createScrapeSettingsDraft(scrapeSettings.value),
       },
       { context: 'content-script', tabId },
     )
@@ -401,6 +403,9 @@ async function loadScrapeSettings() {
 }
 
 async function saveScrapeSettings() {
+  if (scrapeSettingsError.value)
+    return
+
   const normalizedSettings = createScrapeSettingsDraft(scrapeSettings.value)
   scrapeSettings.value = normalizedSettings
   await browser.storage.local.set({ [profileScrapeSettingsStorageKey]: normalizedSettings })
@@ -409,6 +414,29 @@ async function saveScrapeSettings() {
 async function resetScrapeSettings() {
   scrapeSettings.value = createScrapeSettingsDraft()
   await saveScrapeSettings()
+}
+
+function getScrapeSettingsValidationError(settings: ProfileScrapeSettings): string | null {
+  if (!isPositiveInteger(settings.cooldownBatchSize))
+    return 'Cooldown batch size must be a whole number greater than 0.'
+
+  if (!isPositiveInteger(settings.cooldownDelayRange.min) || !isPositiveInteger(settings.cooldownDelayRange.max))
+    return 'Cooldown values must be whole numbers greater than 0.'
+
+  if (settings.cooldownDelayRange.min > settings.cooldownDelayRange.max)
+    return 'Cooldown min cannot be greater than cooldown max.'
+
+  if (!isPositiveInteger(settings.scrollDelayRange.min) || !isPositiveInteger(settings.scrollDelayRange.max))
+    return 'Scroll values must be whole numbers greater than 0.'
+
+  if (settings.scrollDelayRange.min > settings.scrollDelayRange.max)
+    return 'Scroll min cannot be greater than scroll max.'
+
+  return null
+}
+
+function isPositiveInteger(value: number) {
+  return Number.isInteger(value) && value > 0
 }
 
 onMounted(async () => {
@@ -495,7 +523,11 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <button class="btn w-full rounded-[12px] bg-[#1d1d1f] px-4 py-3 text-[14px] font-semibold text-white transition-all hover:bg-black" @click="saveScrapeSettings">
+        <p class="text-[12px] leading-snug" :class="scrapeSettingsError ? 'text-[#ff3b30] font-medium' : 'text-[#86868b]'">
+          {{ scrapeSettingsError ?? 'Settings are stored locally and used for the next fetch.' }}
+        </p>
+
+        <button class="btn w-full rounded-[12px] bg-[#1d1d1f] px-4 py-3 text-[14px] font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:bg-[#c7c7cc]" :disabled="!!scrapeSettingsError" @click="saveScrapeSettings">
           Save Settings
         </button>
       </section>
