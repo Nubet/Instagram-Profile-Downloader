@@ -4,16 +4,16 @@ This document describes the core mechanics behind the InstaBulk Post Downloader,
 
 ## High-Level Flow
 
-1. **DOM Traversal & Emulated Scrolling**  
-   The extension injects a content script into the Instagram Profile page. It smoothly scrolls down the page, triggering Instagram's native lazy-loading (hydration) of older posts. 
-   
-2. **Anchor Extraction**  
+1. **DOM Traversal & Emulated Scrolling**
+   The extension injects a content script into the Instagram Profile page. It smoothly scrolls down the page, triggering Instagram's native lazy-loading (hydration) of older posts.
+
+2. **Anchor Extraction**
    After every scroll tick, the content script scans the DOM for `<a href="/p/SHORTCODE/">` elements. The grid images (thumbnails) are temporarily stored as fallbacks.
 
-3. **High-Resolution Data Fetching (Enrichment)**  
+3. **High-Resolution Data Fetching (Enrichment)**
    For every unique post shortcode extracted, the extension makes an authenticated GraphQL request to retrieve the full media payload (original resolution images, video URLs, and full captions).
 
-4. **Batch Generation**  
+4. **Batch Generation**
    The gathered and enriched data is passed to the background worker (`DownloadManager`), which schedules the native browser downloads.
 
 ---
@@ -26,7 +26,7 @@ Our scraper actively utilizes this new schema to circumvent limitations and corr
 
 ### The Request Structure
 
-The scraper executes a standard `POST` request to `https://www.instagram.com/graphql/query` leveraging the user's active browser session cookies (`credentials: 'include'`). 
+The scraper executes a standard `POST` request to `https://www.instagram.com/graphql/query` leveraging the user's active browser session cookies (`credentials: 'include'`).
 
 It queries the specific legacy-compatible operation designed for web Post Details:
 - **`doc_id`**: `27128499623469141` (PolarisPostRootQuery)
@@ -48,9 +48,9 @@ The new GraphQL API returns data nested deeply under a `xdt_api__v1__media__shor
     "xdt_api__v1__media__shortcode__web_info": {
       "items": [
         {
-          "pk": "...",
-          "caption": { "text": "..." },
-          "carousel_media": [ ... ]
+          "pk": "12345",
+          "caption": { "text": "Example text" },
+          "carousel_media": []
         }
       ]
     }
@@ -60,7 +60,7 @@ The new GraphQL API returns data nested deeply under a `xdt_api__v1__media__shor
 
 ### Media Normalization & Carousel Support
 
-Since the traditional `edge_sidecar_to_children` array and `display_url` properties have been largely replaced in the modern payload, our parser normalizes the new `carousel_media` array. 
+Since the traditional `edge_sidecar_to_children` array and `display_url` properties have been largely replaced in the modern payload, our parser normalizes the new `carousel_media` array.
 
 The parser (`extractMediaFromItem` in `fetchInstagramPostDetails.ts`) executes the following logic for each media item:
 
@@ -69,7 +69,7 @@ The parser (`extractMediaFromItem` in `fetchInstagramPostDetails.ts`) executes t
 3. **Resolution Selection**:
    - **For Images**: It searches `child.image_versions2.candidates` and sorts the array by `(width * height)` in descending order, strictly picking the first (highest resolution) URL.
    - **For Videos**: It searches `child.video_versions`, sorts them by resolution in the same manner, and extracts the highest quality `.mp4` URL.
-4. **Fallback Mechanism**: 
+4. **Fallback Mechanism**:
    - **Single Media Fallback**: If a post consists of exactly one image, the parser deliberately returns an empty array. This triggers the scraper to fallback to the DOM grid image, which frequently offers higher uncompressed quality for single-frame grid posts than the GraphQL metadata candidates.
    - **API Failure Fallback**: If the GraphQL request completely fails or returns incomplete media arrays, the script seamlessly falls back to extracting the `meta[property="og:video"]` tag from the post's direct HTML page, ensuring robust scraping continuity.
 
