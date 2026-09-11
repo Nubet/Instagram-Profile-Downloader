@@ -4,9 +4,14 @@ export interface InstagramProfile {
   targetRoot: string
 }
 
+export interface ScrapedMedia {
+  url: string
+  type: 'image' | 'video'
+}
+
 export interface ScrapedPost {
   id: string
-  imageUrl: string
+  media: ScrapedMedia[]
   caption: string
   profileName: string
 }

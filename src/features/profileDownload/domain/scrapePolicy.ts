@@ -7,6 +7,9 @@ export interface ProfileScrapeSettings {
   scrollDelayRange: DelayRange
   cooldownDelayRange: DelayRange
   cooldownBatchSize: number
+  downloadImages: boolean
+  downloadVideos: boolean
+  downloadCaptions: boolean
 }
 
 export const profileScrapePolicy = {
@@ -26,6 +29,9 @@ export const defaultProfileScrapeSettings: ProfileScrapeSettings = {
   scrollDelayRange: { ...profileScrapePolicy.scrollDelayRange },
   cooldownDelayRange: { ...profileScrapePolicy.cooldownDelayRange },
   cooldownBatchSize: profileScrapePolicy.cooldownBatchSize,
+  downloadImages: true,
+  downloadVideos: true,
+  downloadCaptions: true,
 }
 
 export const profileScrapeSettingsStorageKey = 'profileScrapeSettings'
@@ -46,6 +52,9 @@ export function resolveProfileScrapeSettings(settings?: Partial<ProfileScrapeSet
       max: Math.max(cooldownMin, cooldownMax),
     },
     cooldownBatchSize: normalizePositiveInteger(settings?.cooldownBatchSize, defaultProfileScrapeSettings.cooldownBatchSize),
+    downloadImages: settings?.downloadImages ?? defaultProfileScrapeSettings.downloadImages,
+    downloadVideos: settings?.downloadVideos ?? defaultProfileScrapeSettings.downloadVideos,
+    downloadCaptions: settings?.downloadCaptions ?? defaultProfileScrapeSettings.downloadCaptions,
   }
 }
 
