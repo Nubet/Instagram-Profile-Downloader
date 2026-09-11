@@ -14,22 +14,31 @@ describe('buildDownloadBatch', () => {
       },
     }
 
+    const settings = {
+      scrollDelayRange: { min: 1000, max: 2000 },
+      cooldownDelayRange: { min: 1000, max: 2000 },
+      cooldownBatchSize: 30,
+      downloadImages: true,
+      downloadVideos: true,
+      downloadCaptions: true,
+    }
+
     const posts: ScrapedPost[] = [
       {
         id: 'post-1',
-        imageUrl: 'https://cdn.example.com/post-1.jpg',
+        media: [{ url: 'https://cdn.example.com/post-1.jpg', type: 'image' }],
         caption: 'Caption text',
         profileName: 'nubet',
       },
     ]
 
-    expect(buildDownloadBatch(session, posts)).toEqual({
+    expect(buildDownloadBatch(session, posts, settings)).toEqual({
       sessionId: 'session-1',
       profile: session.profile,
       posts,
       items: [
         {
-          id: 'post-1:image',
+          id: 'post-1:media:0',
           postId: 'post-1',
           kind: 'image',
           path: 'nubet/post-1/image.jpg',
@@ -63,18 +72,28 @@ describe('buildDownloadBatch', () => {
         targetRoot: 'nubet',
       },
     }
+
+    const settings = {
+      scrollDelayRange: { min: 1000, max: 2000 },
+      cooldownDelayRange: { min: 1000, max: 2000 },
+      cooldownBatchSize: 30,
+      downloadImages: true,
+      downloadVideos: true,
+      downloadCaptions: true,
+    }
+
     const posts: ScrapedPost[] = [
       {
         id: 'post-1',
-        imageUrl: 'https://cdn.example.com/post-1.jpg',
+        media: [{ url: 'https://cdn.example.com/post-1.jpg', type: 'image' }],
         caption: '',
         profileName: 'nubet',
       },
     ]
 
-    expect(buildDownloadBatch(session, posts).items).toEqual([
+    expect(buildDownloadBatch(session, posts, settings).items).toEqual([
       {
-        id: 'post-1:image',
+        id: 'post-1:media:0',
         postId: 'post-1',
         kind: 'image',
         path: 'nubet/post-1/image.jpg',

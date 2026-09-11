@@ -5,19 +5,19 @@ import type { ScrapedPost } from '~/features/profileDownload/domain/profileDownl
 const posts: ScrapedPost[] = [
   {
     id: 'post-1',
-    imageUrl: 'https://cdn.example.com/post-1.jpg',
+    media: [{ url: 'https://cdn.example.com/post-1.jpg', type: 'image' }],
     caption: 'Caption 1',
     profileName: 'nubet',
   },
   {
     id: 'post-2',
-    imageUrl: 'https://cdn.example.com/post-2.jpg',
+    media: [{ url: 'https://cdn.example.com/post-2.jpg', type: 'image' }],
     caption: 'Caption 2',
     profileName: 'nubet',
   },
   {
     id: 'post-3',
-    imageUrl: 'https://cdn.example.com/post-3.jpg',
+    media: [{ url: 'https://cdn.example.com/post-3.jpg', type: 'image' }],
     caption: 'Caption 3',
     profileName: 'nubet',
   },

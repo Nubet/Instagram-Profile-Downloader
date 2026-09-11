@@ -33,13 +33,13 @@ describe('extractProfilePostsFromDocument', () => {
       posts: [
         {
           id: 'post-1',
-          imageUrl: 'https://cdn.example.com/post-1.jpg',
+          media: [{ url: 'https://cdn.example.com/post-1.jpg', type: 'image' }],
           caption: '',
           profileName: 'nubet',
         },
         {
           id: 'post-2',
-          imageUrl: 'https://cdn.example.com/post-2.jpg',
+          media: [{ url: 'https://cdn.example.com/post-2.jpg', type: 'image' }],
           caption: '',
           profileName: 'nubet',
         },
@@ -101,7 +101,7 @@ describe('extractProfilePostsFromDocument', () => {
       posts: [
         {
           id: 'post-4',
-          imageUrl: 'https://cdn.example.com/post-4.jpg',
+          media: [{ url: 'https://cdn.example.com/post-4.jpg', type: 'image' }],
           caption: '',
           profileName: 'nubet',
         },
@@ -121,7 +121,7 @@ describe('extractProfilePostsFromDocument', () => {
     expect(extractProfilePostsFromDocument(document, 'nubet').posts).toEqual([
       {
         id: 'post-5',
-        imageUrl: 'https://cdn.example.com/post-5.jpg',
+        media: [{ url: 'https://cdn.example.com/post-5.jpg', type: 'image' }],
         caption: '',
         profileName: 'nubet',
       },

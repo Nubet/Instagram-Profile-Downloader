@@ -395,6 +395,9 @@ function createScrapeSettingsDraft(settings: Partial<ProfileScrapeSettings> = de
     scrollDelayRange: { ...resolved.scrollDelayRange },
     cooldownDelayRange: { ...resolved.cooldownDelayRange },
     cooldownBatchSize: resolved.cooldownBatchSize,
+    downloadImages: resolved.downloadImages,
+    downloadVideos: resolved.downloadVideos,
+    downloadCaptions: resolved.downloadCaptions,
   }
 }
 
@@ -524,6 +527,29 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
+        <div class="space-y-2.5 pt-3 border-t border-[#f2f2f7]">
+          <label class="flex items-center gap-2.5 cursor-pointer group">
+            <div class="relative w-4 h-4 rounded-[4px] border transition-colors flex items-center justify-center" :class="scrapeSettings.downloadImages ? 'bg-[#007aff] border-[#007aff]' : 'border-[#c7c7cc] bg-white group-hover:border-[#a1a1a6]'">
+              <PopupIcon v-if="scrapeSettings.downloadImages" name="check" class="text-white text-[10px]" />
+            </div>
+            <input v-model="scrapeSettings.downloadImages" type="checkbox" class="sr-only">
+            <span class="text-[13px] text-[#1d1d1f] font-medium">Download Images</span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer group">
+            <div class="relative w-4 h-4 rounded-[4px] border transition-colors flex items-center justify-center" :class="scrapeSettings.downloadVideos ? 'bg-[#007aff] border-[#007aff]' : 'border-[#c7c7cc] bg-white group-hover:border-[#a1a1a6]'">
+              <PopupIcon v-if="scrapeSettings.downloadVideos" name="check" class="text-white text-[10px]" />
+            </div>
+            <input v-model="scrapeSettings.downloadVideos" type="checkbox" class="sr-only">
+            <span class="text-[13px] text-[#1d1d1f] font-medium">Download Videos (Reels)</span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer group">
+            <div class="relative w-4 h-4 rounded-[4px] border transition-colors flex items-center justify-center" :class="scrapeSettings.downloadCaptions ? 'bg-[#007aff] border-[#007aff]' : 'border-[#c7c7cc] bg-white group-hover:border-[#a1a1a6]'">
+              <PopupIcon v-if="scrapeSettings.downloadCaptions" name="check" class="text-white text-[10px]" />
+            </div>
+            <input v-model="scrapeSettings.downloadCaptions" type="checkbox" class="sr-only">
+            <span class="text-[13px] text-[#1d1d1f] font-medium">Save Captions (.txt)</span>
+          </label>
+        </div>
         <p class="text-[12px] leading-snug" :class="scrapeSettingsError ? 'text-[#ff3b30] font-medium' : 'text-[#86868b]'">
           {{ scrapeSettingsError ?? 'Settings are stored locally and used for the next fetch.' }}
         </p>
@@ -663,8 +689,11 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
 
-                <div class="w-11 h-11 rounded-[6px] overflow-hidden flex-shrink-0 bg-[#f2f2f7] border border-black/5">
-                  <img :src="post.imageUrl" class="w-full h-full object-cover">
+                <div class="w-11 h-11 rounded-[6px] overflow-hidden flex-shrink-0 bg-[#f2f2f7] border border-black/5 relative">
+                  <img :src="post.media[0]?.url" class="w-full h-full object-cover">
+                  <div v-if="post.media[0]?.type === 'video'" class="absolute bottom-[2px] right-[2px] bg-black/60 rounded-[3px] p-0.5 shadow-sm text-white text-[8px] font-bold uppercase tracking-widest px-1">
+                    Vid
+                  </div>
                 </div>
 
                 <div class="flex-1 min-w-0">
