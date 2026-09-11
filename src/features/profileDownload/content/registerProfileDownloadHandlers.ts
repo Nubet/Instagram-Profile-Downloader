@@ -2,6 +2,8 @@ import { onMessage } from 'webext-bridge/content-script'
 import { extensionMessage } from '../contracts/messages'
 import type {
   DownloadSelectedPostsRequest,
+  FinalizeProfileDownloadRequest,
+  ResumeProfileDownloadRequest,
   StartProfileDownloadRequest,
   StopProfileDownloadRequest,
 } from '../contracts/messages'
@@ -20,6 +22,14 @@ export function registerProfileDownloadHandlers() {
 
   onMessage(extensionMessage.stopProfileDownload, ({ data }) => {
     return runtime.stopProfileDownload(data as unknown as StopProfileDownloadRequest)
+  })
+
+  onMessage(extensionMessage.resumeProfileDownload, ({ data }) => {
+    return runtime.resumeProfileDownload(data as unknown as ResumeProfileDownloadRequest)
+  })
+
+  onMessage(extensionMessage.finalizeProfileDownload, ({ data }) => {
+    return runtime.finalizeProfileDownload(data as unknown as FinalizeProfileDownloadRequest)
   })
 
   onMessage(extensionMessage.downloadSelectedPosts, async ({ data }) => {

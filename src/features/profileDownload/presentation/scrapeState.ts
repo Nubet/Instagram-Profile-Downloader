@@ -20,6 +20,7 @@ export type ScrapePhase =
   | 'completed'
   | 'stopped'
   | 'failed'
+  | 'paused'
 
 export interface ScrapeProgress {
   sessionId: string | null
@@ -31,7 +32,7 @@ export interface ScrapeProgress {
   message: string
 }
 
-const activePhases: ScrapePhase[] = ['starting', 'scraping', 'cooldown', 'saving']
+const activePhases: ScrapePhase[] = ['starting', 'scraping', 'cooldown', 'saving', 'paused']
 
 let nextDebugEntryId = 0
 

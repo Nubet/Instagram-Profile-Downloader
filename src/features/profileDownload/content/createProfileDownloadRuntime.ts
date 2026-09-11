@@ -24,15 +24,18 @@ import {
   getSavedProgress,
   getSavingProgress,
   getScrapeLoopProgress,
-  getStoppedScrapeProgress,
   isActiveScrapePhase,
 } from '../presentation/scrapeState'
 import type { ScrapeDebugEntry, ScrapeProgress } from '../presentation/scrapeState'
 import type {
   DownloadSelectedPostsRequest,
   DownloadSelectedPostsResponse,
+  FinalizeProfileDownloadRequest,
+  FinalizeProfileDownloadResponse,
   GetScrapeStatusResponse,
   QueueDownloadBatchResponse,
+  ResumeProfileDownloadRequest,
+  ResumeProfileDownloadResponse,
   StartProfileDownloadRequest,
   StartProfileDownloadResponse,
   StopProfileDownloadRequest,
@@ -43,6 +46,8 @@ export interface ProfileDownloadRuntime {
   getScrapeStatus: () => GetScrapeStatusResponse
   startProfileDownload: (request: StartProfileDownloadRequest) => Promise<StartProfileDownloadResponse>
   stopProfileDownload: (request: StopProfileDownloadRequest) => StopProfileDownloadResponse
+  resumeProfileDownload: (request: ResumeProfileDownloadRequest) => ResumeProfileDownloadResponse
+  finalizeProfileDownload: (request: FinalizeProfileDownloadRequest) => FinalizeProfileDownloadResponse
   downloadSelectedPosts: (request: DownloadSelectedPostsRequest) => Promise<DownloadSelectedPostsResponse>
 }
 
@@ -52,7 +57,8 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
   let scrapedPosts: ScrapedPost[] = []
   let collectedPosts: ScrapedPost[] = []
   let seenPostIds = new Set<string>()
-  let isStopRequested = false
+  let isPaused = false
+  let isFinalizeRequested = false
   let lastCooldownPostCount = 0
   let activeRunId = 0
   let debugLog: ScrapeDebugEntry[] = []
@@ -77,7 +83,8 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
 
     activeRunId += 1
     const runId = activeRunId
-    isStopRequested = false
+    isPaused = false
+    isFinalizeRequested = false
     activeSettings = resolveProfileScrapeSettings(request.settings)
     seenPostIds = new Set()
     debugLog = []
@@ -111,24 +118,24 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
     const accepted = activeSession?.id === request.sessionId
 
     if (accepted)
-      isStopRequested = true
+      isPaused = true
 
     addDebugLog(
       accepted ? 'info' : 'warn',
       'session',
-      accepted ? 'Stop requested for active session.' : 'Stop requested for a non-active session.',
+      accepted ? 'Pause requested for active session.' : 'Pause requested for a non-active session.',
       accepted ? `sessionId=${request.sessionId}` : undefined,
     )
 
     progress = accepted
       ? {
           ...progress,
-          phase: 'stopped',
-          message: 'Stopping download.',
+          phase: 'paused',
+          message: 'Scraping paused.',
         }
       : {
           ...progress,
-          message: 'No matching session to stop.',
+          message: 'No matching session to pause.',
         }
 
     return {
@@ -136,6 +143,49 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
       debugLog,
       posts: collectedPosts,
       progress,
+    }
+  }
+
+  function resumeProfileDownload(request: ResumeProfileDownloadRequest): ResumeProfileDownloadResponse {
+    const accepted = activeSession?.id === request.sessionId && isPaused
+
+    if (accepted) {
+      isPaused = false
+      progress = {
+        ...progress,
+        phase: 'scraping',
+        message: `Resumed scanning after ${scrapedPosts.length} post${scrapedPosts.length === 1 ? '' : 's'}.`,
+      }
+      addDebugLog('info', 'session', 'Resumed scrape session.')
+    }
+
+    return {
+      accepted,
+      progress,
+      debugLog,
+      posts: collectedPosts,
+    }
+  }
+
+  function finalizeProfileDownload(request: FinalizeProfileDownloadRequest): FinalizeProfileDownloadResponse {
+    const accepted = activeSession?.id === request.sessionId
+
+    if (accepted) {
+      isFinalizeRequested = true
+      isPaused = false // break out of the wait loop if paused
+      progress = {
+        ...progress,
+        phase: 'scraping',
+        message: 'Finalizing fetched posts...',
+      }
+      addDebugLog('info', 'session', 'Finalize requested.')
+    }
+
+    return {
+      accepted,
+      progress,
+      debugLog,
+      posts: collectedPosts,
     }
   }
 
@@ -215,28 +265,31 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
       await waitForInitialProfileContent(session, runId)
 
       while (isCurrentRun(session.id, runId)) {
-        if (isStopRequested)
+        if (isFinalizeRequested)
           break
 
+        if (isPaused) {
+          await wait(500)
+          continue
+        }
+
         if (hasReachedProfileEnd(attemptsWithoutNewPosts, profileScrapePolicy.maxAttemptsWithoutNewPosts)) {
-          await finalizeScrapedPosts(session, runId)
-          cleanupSession(session.id, runId)
-          return
+          break
         }
 
         const scrollDelay = getRandomDelay(activeSettings.scrollDelayRange.min, activeSettings.scrollDelayRange.max)
         addDebugLog('info', 'session', 'Waiting before next scroll.', `delayMs=${scrollDelay}`)
         await wait(scrollDelay)
 
-        if (!isCurrentRun(session.id, runId) || isStopRequested)
-          break
+        if (!isCurrentRun(session.id, runId) || isFinalizeRequested || isPaused)
+          continue
 
         window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })
         addDebugLog('info', 'session', 'Scrolled to the current bottom of the profile page.', `scrollHeight=${document.documentElement.scrollHeight}`)
         await wait(profileScrapePolicy.postScrollSettleDelayMs)
 
-        if (!isCurrentRun(session.id, runId) || isStopRequested)
-          break
+        if (!isCurrentRun(session.id, runId) || isFinalizeRequested || isPaused)
+          continue
 
         if (await scanVisiblePosts(session, `Post-scroll scan ${attemptsWithoutNewPosts + 1}.`)) {
           attemptsWithoutNewPosts = 0
@@ -245,9 +298,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
         else {
           if (!profileScrapePolicy.enableEndOfProfileRetries) {
             addDebugLog('info', 'session', 'No new posts found and end-of-profile retries are disabled. Finalizing fetched posts.')
-            await finalizeScrapedPosts(session, runId)
-            cleanupSession(session.id, runId)
-            return
+            break
           }
 
           attemptsWithoutNewPosts += 1
@@ -261,13 +312,6 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
           addDebugLog('info', 'session', 'Applying cooldown after batch threshold.', `delayMs=${cooldownDelay}, posts=${scrapedPosts.length}`)
           await wait(cooldownDelay)
         }
-      }
-
-      if (isStopRequested) {
-        addDebugLog('info', 'session', 'Stopped session before save phase.')
-        progress = getStoppedScrapeProgress(session, scrapedPosts.length)
-        cleanupSession(session.id, runId)
-        return
       }
 
       if (isCurrentRun(session.id, runId))
@@ -305,7 +349,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
     const enrichedPosts: ScrapedPost[] = []
 
     for (const post of posts) {
-      if (!isCurrentRun(session.id, runId) || isStopRequested)
+      if (!isCurrentRun(session.id, runId))
         return posts
 
       try {
@@ -316,12 +360,12 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
         addDebugLog(
           details.caption || details.media.length > 0 ? 'info' : 'warn',
           'extractor',
-          details.caption || details.media.length > 0 ? `Details fetched for ${post.id}.` : `No details for ${post.id}.`,
+          details.caption || details.media.length > 0 ? `Details fetched for ${post.id}.` : `Details fetch failed for ${post.id}. Falling back to DOM thumbnail.`,
         )
       }
       catch (error) {
         enrichedPosts.push({ ...post, caption: '' })
-        addDebugLog('warn', 'extractor', `Details fetch failed for ${post.id}.`, error instanceof Error ? error.message : 'Unknown fetch error.')
+        addDebugLog('warn', 'extractor', `API fetch failed for ${post.id}. Falling back to DOM thumbnail.`, error instanceof Error ? error.message : 'Unknown API error.')
       }
 
       await wait(profileScrapePolicy.captionRequestDelayMs)
@@ -332,7 +376,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
 
   async function waitForInitialProfileContent(session: DownloadSession, runId: number) {
     for (let attempt = 1; attempt <= profileScrapePolicy.hydrationAttempts; attempt += 1) {
-      if (!isCurrentRun(session.id, runId) || isStopRequested)
+      if (!isCurrentRun(session.id, runId) || isFinalizeRequested || isPaused)
         return
 
       const foundNewPosts = await scanVisiblePosts(session, `Hydration scan ${attempt}/${profileScrapePolicy.hydrationAttempts} before scrolling.`)
@@ -385,7 +429,8 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
 
     scrapedPosts = []
     seenPostIds = new Set()
-    isStopRequested = false
+    isPaused = false
+    isFinalizeRequested = false
     lastCooldownPostCount = 0
     activeSettings = defaultProfileScrapeSettings
   }
@@ -402,6 +447,8 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
     getScrapeStatus,
     startProfileDownload,
     stopProfileDownload,
+    resumeProfileDownload,
+    finalizeProfileDownload,
     downloadSelectedPosts,
   }
 }

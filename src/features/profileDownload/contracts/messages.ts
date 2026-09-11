@@ -8,6 +8,8 @@ export const extensionMessage = {
   getScrapeStatus: 'scrape/get-status',
   startProfileDownload: 'scrape/start-profile-download',
   stopProfileDownload: 'scrape/stop-profile-download',
+  resumeProfileDownload: 'scrape/resume-profile-download',
+  finalizeProfileDownload: 'scrape/finalize-profile-download',
   downloadSelectedPosts: 'downloads/download-selected-posts',
   queueDownloadBatch: 'downloads/queue-batch',
 } as const
@@ -36,6 +38,28 @@ export interface StopProfileDownloadRequest {
 }
 
 export interface StopProfileDownloadResponse {
+  accepted: boolean
+  progress: ScrapeProgress
+  debugLog: ScrapeDebugEntry[]
+  posts: ScrapedPost[]
+}
+
+export interface ResumeProfileDownloadRequest {
+  sessionId: string
+}
+
+export interface ResumeProfileDownloadResponse {
+  accepted: boolean
+  progress: ScrapeProgress
+  debugLog: ScrapeDebugEntry[]
+  posts: ScrapedPost[]
+}
+
+export interface FinalizeProfileDownloadRequest {
+  sessionId: string
+}
+
+export interface FinalizeProfileDownloadResponse {
   accepted: boolean
   progress: ScrapeProgress
   debugLog: ScrapeDebugEntry[]
