@@ -74,7 +74,7 @@ export function extractProfilePostsFromDocument(document: Document, profileName:
     seenPostIds.add(postId)
     posts.push({
       id: postId,
-      imageUrl,
+      media: [{ url: imageUrl, type: media instanceof HTMLVideoElement ? 'video' : 'image' }],
       caption: '',
       profileName,
     })

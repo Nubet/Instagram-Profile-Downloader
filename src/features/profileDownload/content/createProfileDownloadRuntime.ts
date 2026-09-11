@@ -14,7 +14,7 @@ import {
 import type { DownloadSession, ScrapedPost } from '../domain/profileDownload'
 import type { ProfileScrapeSettings } from '../domain/scrapePolicy'
 import { extractProfilePostsFromDocument } from '../infrastructure/extractProfilePostsFromDocument'
-import { fetchInstagramPostCaption } from '../infrastructure/fetchInstagramPostCaption'
+import { fetchInstagramPostDetails } from '../infrastructure/fetchInstagramPostDetails'
 import {
   createIdleProgress,
   createScrapeDebugEntry,
@@ -309,17 +309,19 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
         return posts
 
       try {
-        const caption = await fetchInstagramPostCaption(post.id)
-        enrichedPosts.push({ ...post, caption })
+        const details = await fetchInstagramPostDetails(post.id)
+        const updatedMedia = details.media.length > 0 ? details.media : post.media
+
+        enrichedPosts.push({ ...post, caption: details.caption, media: updatedMedia })
         addDebugLog(
-          caption ? 'info' : 'warn',
+          details.caption || details.media.length > 0 ? 'info' : 'warn',
           'extractor',
-          caption ? `Caption fetched for ${post.id}.` : `No authored caption for ${post.id}.`,
+          details.caption || details.media.length > 0 ? `Details fetched for ${post.id}.` : `No details for ${post.id}.`,
         )
       }
       catch (error) {
         enrichedPosts.push({ ...post, caption: '' })
-        addDebugLog('warn', 'extractor', `Caption fetch failed for ${post.id}.`, error instanceof Error ? error.message : 'Unknown caption fetch error.')
+        addDebugLog('warn', 'extractor', `Details fetch failed for ${post.id}.`, error instanceof Error ? error.message : 'Unknown fetch error.')
       }
 
       await wait(profileScrapePolicy.captionRequestDelayMs)
