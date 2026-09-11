@@ -36,6 +36,10 @@ const hasActiveSession = computed(() => {
   return !!progress.value.sessionId && isActiveScrapePhase(progress.value.phase)
 })
 
+const showLoadingAnim = computed(() => {
+  return isBusy.value || (hasActiveSession.value && progress.value.phase !== 'paused')
+})
+
 const hasFetchedPosts = computed(() => posts.value.length > 0)
 
 const canShowSelectionPanel = computed(() => {
@@ -46,10 +50,10 @@ const scrapeSettingsError = computed(() => getScrapeSettingsValidationError(scra
 
 const actionLabel = computed(() => {
   if (isBusy.value)
-    return hasActiveSession.value ? 'Stopping fetch...' : 'Fetching posts...'
+    return hasActiveSession.value ? 'Pausing fetch...' : 'Fetching posts...'
 
   if (hasActiveSession.value)
-    return 'Stop fetch'
+    return 'Pause fetch'
 
   return hasFetchedPosts.value ? 'Fetch fresh snapshot' : 'Fetch all posts'
 })
@@ -270,8 +274,48 @@ async function stopProfileDownload(tabId: number, currentProgress: ScrapeProgres
     progress.value = {
       ...currentProgress,
       phase: 'failed',
-      message: error instanceof Error ? error.message : 'Could not stop the content script.',
+      message: error instanceof Error ? error.message : 'Could not pause the content script.',
     }
+  }
+  finally {
+    isBusy.value = false
+  }
+}
+
+async function resumeProfileDownloadAction() {
+  if (!activeTabId.value || !progress.value.sessionId)
+    return
+  isBusy.value = true
+  try {
+    const response = await sendMessage(
+      extensionMessage.resumeProfileDownload,
+      { sessionId: progress.value.sessionId },
+      { context: 'content-script', tabId: activeTabId.value },
+    )
+    applyScrapeState(response.progress, response.debugLog, response.posts, progress.value.profileName)
+  }
+  catch (error) {
+    progress.value = { ...progress.value, phase: 'failed', message: error instanceof Error ? error.message : 'Could not resume.' }
+  }
+  finally {
+    isBusy.value = false
+  }
+}
+
+async function finalizeProfileDownloadAction() {
+  if (!activeTabId.value || !progress.value.sessionId)
+    return
+  isBusy.value = true
+  try {
+    const response = await sendMessage(
+      extensionMessage.finalizeProfileDownload,
+      { sessionId: progress.value.sessionId },
+      { context: 'content-script', tabId: activeTabId.value },
+    )
+    applyScrapeState(response.progress, response.debugLog, response.posts, progress.value.profileName)
+  }
+  catch (error) {
+    progress.value = { ...progress.value, phase: 'failed', message: error instanceof Error ? error.message : 'Could not finalize.' }
   }
   finally {
     isBusy.value = false
@@ -480,7 +524,7 @@ onBeforeUnmount(() => {
       </button>
 
       <div class="absolute bottom-0 left-0 w-full h-[1px] bg-[#e5e5ea]">
-        <div v-if="isBusy || hasActiveSession" class="h-full bg-[#007aff] w-full origin-left animate-progress" />
+        <div v-if="showLoadingAnim" class="h-full bg-[#007aff] w-full origin-left animate-progress" />
       </div>
     </header>
 
@@ -561,25 +605,25 @@ onBeforeUnmount(() => {
 
       <section
         class="rounded-[16px] bg-white border p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] relative overflow-hidden transition-all duration-300"
-        :class="(isBusy || hasActiveSession) ? 'border-[#007aff]/30 shadow-[0_4px_12px_rgba(0,122,255,0.08)]' : 'border-[#e5e5ea]'"
+        :class="showLoadingAnim ? 'border-[#007aff]/30 shadow-[0_4px_12px_rgba(0,122,255,0.08)]' : 'border-[#e5e5ea]'"
       >
-        <div v-if="isBusy || hasActiveSession" class="absolute inset-0 bg-gradient-to-r from-transparent via-[#007aff]/[0.03] to-transparent animate-shimmer" />
+        <div v-if="showLoadingAnim" class="absolute inset-0 bg-gradient-to-r from-transparent via-[#007aff]/[0.03] to-transparent animate-shimmer" />
 
         <div class="relative">
           <div class="flex justify-between items-center mb-1.5">
             <h2
               class="text-[11px] font-semibold uppercase tracking-wider transition-colors duration-300"
-              :class="(isBusy || hasActiveSession) ? 'text-[#007aff]' : 'text-[#86868b]'"
+              :class="showLoadingAnim ? 'text-[#007aff]' : 'text-[#86868b]'"
             >
               Status
             </h2>
-            <div class="transition-opacity duration-300" :class="(isBusy || hasActiveSession) ? 'opacity-100' : 'opacity-0'">
+            <div class="transition-opacity duration-300" :class="showLoadingAnim ? 'opacity-100' : 'opacity-0'">
               <PopupIcon name="loader" class="text-[14px] text-[#007aff]" />
             </div>
           </div>
           <p
             class="text-[14px] leading-relaxed transition-colors duration-300"
-            :class="(isBusy || hasActiveSession) ? 'text-[#1d1d1f] font-medium' : 'text-[#1d1d1f]'"
+            :class="showLoadingAnim ? 'text-[#1d1d1f] font-medium' : 'text-[#1d1d1f]'"
           >
             {{ progress.message }}
           </p>
@@ -613,14 +657,31 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
+      <div v-if="progress.phase === 'paused'" class="flex gap-2.5">
+        <button
+          class="btn flex-1 rounded-[14px] px-4 py-3.5 text-[15px] font-semibold flex items-center justify-center gap-2 bg-[#f2f2f7] text-[#1d1d1f] hover:bg-[#e5e5ea] transition-all duration-300"
+          :disabled="isBusy"
+          @click="resumeProfileDownloadAction"
+        >
+          Resume
+        </button>
+        <button
+          class="btn flex-1 rounded-[14px] px-4 py-3.5 text-[15px] font-semibold flex items-center justify-center gap-2 bg-[#007aff] text-white hover:bg-[#0066cc] shadow-[0_4px_14px_rgba(0,122,255,0.25)] transition-all duration-300"
+          :disabled="isBusy"
+          @click="finalizeProfileDownloadAction"
+        >
+          Finalize
+        </button>
+      </div>
       <button
+        v-else
         class="btn w-full rounded-[14px] px-4 py-3.5 text-[15px] font-semibold flex items-center justify-center gap-2 transition-all duration-300"
         :class="hasActiveSession ? 'bg-[#fff0f0] text-[#ff3b30] hover:bg-[#ffe5e5] border border-[#ff3b30]/10 shadow-sm' : 'btn-primary'"
         :disabled="isBusy && !hasActiveSession"
         @click="handleAction"
       >
         <PopupIcon v-if="isBusy" name="loader" class="text-[18px]" />
-        <PopupIcon v-else-if="hasActiveSession" name="stop" class="text-[14px]" />
+        <PopupIcon v-else-if="hasActiveSession" name="pause" class="text-[14px]" />
         {{ actionLabel }}
       </button>
 
@@ -737,13 +798,14 @@ onBeforeUnmount(() => {
           <span>Session Log</span>
           <PopupIcon name="chevron-down" class="text-[16px] transform transition-transform duration-200 group-open:rotate-180" />
         </summary>
-        <div class="mt-2 bg-[#f2f2f7] rounded-[12px] p-3 text-[11px] font-mono text-[#86868b] max-h-[160px] overflow-y-auto custom-scrollbar border border-black/5 shadow-inner">
+        <div class="mt-2 bg-[#f2f2f7] rounded-[12px] p-3 text-[11px] font-mono text-[#86868b] max-h-[160px] overflow-y-auto custom-scrollbar border border-black/5 shadow-inner select-text">
           <p v-if="visibleDebugLog.length === 0" class="text-center py-4 text-[#a1a1a6]">
             No logs yet.
           </p>
           <div v-for="entry in visibleDebugLog" :key="entry.id" class="mb-2 last:mb-0">
             <span class="text-[#1d1d1f] font-semibold">[{{ entry.level }}]</span>
             <span class="ml-1">{{ entry.message }}</span>
+            <span v-if="entry.details" class="ml-1 opacity-70">({{ entry.details }})</span>
           </div>
         </div>
       </details>
