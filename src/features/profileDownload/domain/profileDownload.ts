@@ -14,6 +14,7 @@ export interface ScrapedPost {
   media: ScrapedMedia[]
   caption: string
   profileName: string
+  date?: string
 }
 
 export interface DownloadSession {

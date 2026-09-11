@@ -356,11 +356,11 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
         const details = await fetchInstagramPostDetails(post.id)
         const updatedMedia = details.media.length > 0 ? details.media : post.media
 
-        enrichedPosts.push({ ...post, caption: details.caption, media: updatedMedia })
+        enrichedPosts.push({ ...post, caption: details.caption, media: updatedMedia, date: details.date })
         addDebugLog(
           details.caption || details.media.length > 0 ? 'info' : 'warn',
           'extractor',
-          details.caption || details.media.length > 0 ? `Details fetched for ${post.id}.` : `Details fetch failed for ${post.id}. Falling back to DOM thumbnail.`,
+          details.caption || details.media.length > 0 ? `Details fetched for ${post.id}. Date resolved: ${details.date || 'NONE'}` : `Details fetch failed for ${post.id}. Falling back to DOM thumbnail.`,
         )
       }
       catch (error) {

@@ -7,12 +7,13 @@ export function buildDownloadBatch(session: DownloadSession, posts: ScrapedPost[
     sessionId: session.id,
     profile: session.profile,
     posts,
-    items: posts.flatMap(post => createDownloadItems(session, post, settings)),
+    items: posts.flatMap((post, index) => createDownloadItems(session, post, settings, index)),
   }
 }
 
-function createDownloadItems(session: DownloadSession, post: ScrapedPost, settings: ProfileScrapeSettings): DownloadItem[] {
-  const basePath = `${session.profile.targetRoot}/${post.id}`
+function createDownloadItems(session: DownloadSession, post: ScrapedPost, settings: ProfileScrapeSettings, postIndex: number): DownloadItem[] {
+  const orderPrefix = String(postIndex + 1).padStart(4, '0')
+  const basePath = `${session.profile.targetRoot}/${orderPrefix}_${post.id}`
   const items: DownloadItem[] = []
 
   post.media.forEach((mediaItem, index) => {

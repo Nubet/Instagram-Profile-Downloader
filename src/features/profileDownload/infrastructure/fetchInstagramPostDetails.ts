@@ -69,10 +69,30 @@ async function fetchDetailsViaGraphQl(shortcode: string): Promise<PostDetails> {
   if (!item)
     throw new Error('No media found in new GraphQL response.')
 
+  const date = extractDateFromItem(item)
+  if (!date) {
+    const keys = Object.keys(item).join(', ')
+    throw new Error(`MISSING_DATE_KEYS: ${keys} | TYPE_TAKEN_AT: ${typeof item.taken_at} | VAL: ${item.taken_at}`)
+  }
   return {
     caption: extractCaptionFromItem(item),
     media: extractMediaFromItem(item),
+    date,
   }
+}
+
+function extractDateFromItem(item: any): string | undefined {
+  if (item.taken_at) {
+    const num = Number(item.taken_at)
+    if (!Number.isNaN(num))
+      return formatTimestampToDateString(new Date(num * 1000))
+  }
+  if (item.device_timestamp) {
+    const num = Number(item.device_timestamp)
+    if (!Number.isNaN(num))
+      return formatTimestampToDateString(new Date(num / 1000))
+  }
+  return undefined
 }
 
 function extractCaptionFromItem(item: any): string {
