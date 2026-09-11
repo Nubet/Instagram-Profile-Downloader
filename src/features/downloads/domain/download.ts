@@ -10,7 +10,7 @@ export interface DownloadBatch {
 export interface DownloadItem {
   id: string
   postId: string
-  kind: 'image' | 'caption'
+  kind: 'image' | 'video' | 'caption'
   path: string
   source: DownloadSource
 }

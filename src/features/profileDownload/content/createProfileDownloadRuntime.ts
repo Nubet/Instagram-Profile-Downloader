@@ -171,7 +171,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
     }
 
     const selectedPosts = selectScrapedPosts(collectedPosts, request.selection)
-    const batch = buildDownloadBatch(activeSession, selectedPosts)
+    const batch = buildDownloadBatch(activeSession, selectedPosts, activeSettings)
     progress = getSavingProgress(activeSession, collectedPosts.length, batch.items.length)
     addDebugLog('info', 'downloads', 'Queued selected posts for saving.', `selectedPosts=${selectedPosts.length}, files=${batch.items.length}`)
 

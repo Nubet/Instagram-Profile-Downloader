@@ -1,33 +1,44 @@
 import type { DownloadSession, ScrapedPost } from '../domain/profileDownload'
+import type { ProfileScrapeSettings } from '../domain/scrapePolicy'
 import type { DownloadBatch, DownloadItem } from '~/features/downloads/domain/download'
 
-export function buildDownloadBatch(session: DownloadSession, posts: ScrapedPost[]): DownloadBatch {
+export function buildDownloadBatch(session: DownloadSession, posts: ScrapedPost[], settings: ProfileScrapeSettings): DownloadBatch {
   return {
     sessionId: session.id,
     profile: session.profile,
     posts,
-    items: posts.flatMap(post => createDownloadItems(session, post)),
+    items: posts.flatMap(post => createDownloadItems(session, post, settings)),
   }
 }
 
-function createDownloadItems(session: DownloadSession, post: ScrapedPost): DownloadItem[] {
+function createDownloadItems(session: DownloadSession, post: ScrapedPost, settings: ProfileScrapeSettings): DownloadItem[] {
   const basePath = `${session.profile.targetRoot}/${post.id}`
-  const items: DownloadItem[] = [
-    {
-      id: `${post.id}:image`,
+  const items: DownloadItem[] = []
+
+  post.media.forEach((mediaItem, index) => {
+    if (mediaItem.type === 'image' && !settings.downloadImages)
+      return
+    if (mediaItem.type === 'video' && !settings.downloadVideos)
+      return
+
+    const suffix = post.media.length > 1 ? `_${index + 1}` : ''
+    const ext = mediaItem.type === 'video' ? 'mp4' : 'jpg'
+
+    items.push({
+      id: `${post.id}:media:${index}`,
       postId: post.id,
-      kind: 'image',
-      path: `${basePath}/image.jpg`,
+      kind: mediaItem.type,
+      path: `${basePath}/${mediaItem.type}${suffix}.${ext}`,
       source: {
         type: 'remote-url',
-        value: post.imageUrl,
+        value: mediaItem.url,
       },
-    },
-  ]
+    })
+  })
 
   const caption = post.caption.trim()
 
-  if (caption) {
+  if (settings.downloadCaptions && caption) {
     items.push({
       id: `${post.id}:caption`,
       postId: post.id,
