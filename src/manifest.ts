@@ -63,6 +63,16 @@ export async function getManifest() {
         ? `script-src \'self\' http://localhost:${port}; object-src \'self\'`
         : 'script-src \'self\'; object-src \'self\'',
     },
+    ...(isFirefox
+      ? {
+          browser_specific_settings: {
+            gecko: {
+              id: 'instabulk-downloader@norbertfila.com',
+              // update_url: 'https://nubet.github.io/InstaBulk-PostDownloader/updates.json',
+            },
+          },
+        }
+      : {}),
   }
 
   // FIXME: not work in MV3
