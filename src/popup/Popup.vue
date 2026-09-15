@@ -18,6 +18,7 @@ import {
   isActiveScrapePhase,
 } from '~/features/profileDownload/presentation/scrapeState'
 import type { ScrapeDebugEntry, ScrapeProgress } from '~/features/profileDownload/presentation/scrapeState'
+import type { DownloadDeliveryMode } from '~/features/downloads/domain/download'
 
 const progress = ref(createIdleProgress('Checking active tab.'))
 const posts = ref<ScrapedPost[]>([])
@@ -322,7 +323,7 @@ async function finalizeProfileDownloadAction() {
   }
 }
 
-async function downloadSelectedPosts() {
+async function downloadSelectedPosts(deliveryMode: DownloadDeliveryMode = 'individual-files') {
   if (!activeTabId.value || !progress.value.sessionId || !canDownloadSelection.value)
     return
 
@@ -335,6 +336,7 @@ async function downloadSelectedPosts() {
       {
         sessionId: progress.value.sessionId,
         selection,
+        deliveryMode,
       },
       { context: 'content-script', tabId: activeTabId.value },
     )
@@ -783,12 +785,19 @@ onBeforeUnmount(() => {
           <button
             class="btn flex-1 rounded-[14px] px-4 py-3.5 text-[15px] font-semibold text-white bg-gradient-to-r from-[#fa7e1e] via-[#d62976] to-[#962fbf] shadow-[0_4px_14px_rgba(214,41,118,0.25)] hover:shadow-[0_6px_20px_rgba(214,41,118,0.35)] hover:-translate-y-[1px] flex justify-center items-center gap-2 relative overflow-hidden group"
             :disabled="!canDownloadSelection || isBusy"
-            @click="downloadSelectedPosts"
+            @click="downloadSelectedPosts('individual-files')"
           >
             <div v-if="isBusy" class="absolute inset-0 bg-white/20 animate-shimmer" />
             <PopupIcon v-if="isBusy" name="loader" class="relative z-10 text-[18px]" />
             <PopupIcon v-else name="download" class="relative z-10 text-[18px] transition-transform group-hover:-translate-y-[1px]" />
             <span class="relative z-10">{{ downloadSelectionLabel }}</span>
+          </button>
+          <button
+            class="btn rounded-[14px] px-4 py-3.5 text-[14px] font-semibold bg-[#1d1d1f] text-white hover:bg-black flex-shrink-0"
+            :disabled="!canDownloadSelection || isBusy"
+            @click="downloadSelectedPosts('zip-archive')"
+          >
+            Download ZIP
           </button>
         </div>
       </section>

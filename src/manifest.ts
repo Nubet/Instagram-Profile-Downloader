@@ -36,7 +36,11 @@ export async function getManifest() {
       'storage',
       'tabs',
     ],
-    host_permissions: ['https://www.instagram.com/*'],
+    host_permissions: [
+      'https://www.instagram.com/*',
+      'https://*.cdninstagram.com/*',
+      'https://*.fbcdn.net/*',
+    ],
     content_scripts: [
       {
         matches: [

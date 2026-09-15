@@ -2,7 +2,7 @@ import type { DownloadSession, ScrapedPost } from '../domain/profileDownload'
 import type { ProfileScrapeSettings } from '../domain/scrapePolicy'
 import type { ScrapeDebugEntry, ScrapeProgress } from '../presentation/scrapeState'
 import type { DownloadPostSelection } from '../application/selectScrapedPosts'
-import type { DownloadBatch, ScrapeFailure } from '~/features/downloads/domain/download'
+import type { DownloadBatch, DownloadDeliveryMode, ScrapeFailure } from '~/features/downloads/domain/download'
 
 export const extensionMessage = {
   getScrapeStatus: 'scrape/get-status',
@@ -69,6 +69,7 @@ export interface FinalizeProfileDownloadResponse {
 export interface DownloadSelectedPostsRequest {
   sessionId: string
   selection: DownloadPostSelection
+  deliveryMode?: DownloadDeliveryMode
 }
 
 export interface DownloadSelectedPostsResponse {
@@ -78,16 +79,21 @@ export interface DownloadSelectedPostsResponse {
   posts: ScrapedPost[]
   queuedItemCount: number
   downloadedFileCount: number
+  archiveCount?: number
+  failedItemCount?: number
   failure: ScrapeFailure | null
 }
 
 export interface QueueDownloadBatchRequest {
   batch: DownloadBatch
+  deliveryMode?: DownloadDeliveryMode
 }
 
 export interface QueueDownloadBatchResponse {
   accepted: boolean
   queuedItemCount: number
   downloadedFileCount: number
+  archiveCount?: number
+  failedItemCount?: number
   failure: ScrapeFailure | null
 }

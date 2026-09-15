@@ -227,7 +227,10 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
 
     const response = await sendMessage(
       extensionMessage.queueDownloadBatch,
-      { batch } as unknown as never,
+      {
+        batch,
+        deliveryMode: request.deliveryMode ?? 'individual-files',
+      } as unknown as never,
       { context: 'background' } as never,
     ) as unknown as QueueDownloadBatchResponse
 
@@ -254,6 +257,8 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
       posts: collectedPosts,
       queuedItemCount: response.queuedItemCount,
       downloadedFileCount: response.downloadedFileCount,
+      archiveCount: response.archiveCount,
+      failedItemCount: response.failedItemCount,
       failure: response.failure,
     }
   }

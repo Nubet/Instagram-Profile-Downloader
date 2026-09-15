@@ -1,10 +1,5 @@
-import type { DownloadBatch, ScrapeFailure } from '../domain/download'
+import type { DownloadBatch, DownloadBatchResult, ScrapeFailure } from '../domain/download'
 import { downloadItem } from './downloadItem'
-
-export interface DownloadBatchResult {
-  downloadedFileCount: number
-  failure: ScrapeFailure | null
-}
 
 export async function downloadBatch(batch: DownloadBatch): Promise<DownloadBatchResult> {
   let downloadedFileCount = 0

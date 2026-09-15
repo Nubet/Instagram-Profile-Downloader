@@ -7,6 +7,25 @@ export interface DownloadBatch {
   items: DownloadItem[]
 }
 
+export type DownloadDeliveryMode = 'individual-files' | 'zip-archive'
+
+export interface ZipArchiveOptions {
+  maxArchiveBytes: number
+  maxArchiveItems: number
+}
+
+export const defaultZipArchiveOptions: ZipArchiveOptions = {
+  maxArchiveBytes: 400 * 1024 * 1024,
+  maxArchiveItems: 500,
+}
+
+export interface DownloadBatchResult {
+  downloadedFileCount: number
+  failure: ScrapeFailure | null
+  archiveCount?: number
+  failedItemCount?: number
+}
+
 export interface DownloadItem {
   id: string
   postId: string
