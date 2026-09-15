@@ -3,6 +3,7 @@ import type { ScrapedMedia } from '../domain/profileDownload'
 export interface PostDetails {
   caption: string
   media: ScrapedMedia[]
+  date?: string
 }
 
 interface PostPageData {
@@ -93,6 +94,10 @@ function extractDateFromItem(item: any): string | undefined {
       return formatTimestampToDateString(new Date(num / 1000))
   }
   return undefined
+}
+
+function formatTimestampToDateString(date: Date): string {
+  return date.toISOString().slice(0, 10)
 }
 
 function extractCaptionFromItem(item: any): string {

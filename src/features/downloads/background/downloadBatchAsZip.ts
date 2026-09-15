@@ -1,7 +1,7 @@
 import JSZip from 'jszip'
 import type { DownloadBatch, DownloadBatchResult, DownloadItem, ScrapeFailure, ZipArchiveOptions } from '../domain/download'
 import { defaultZipArchiveOptions } from '../domain/download'
-import { downloadBlob } from './downloadBlob'
+import { downloadDataUrl } from './downloadDataUrl'
 import { fetchDownloadItemContent } from './fetchDownloadItemContent'
 
 interface ZipManifestItem {
@@ -98,8 +98,8 @@ async function finalizeZipPart(batch: DownloadBatch, part: ZipPartState, archive
   if (part.errors.length > 0)
     part.zip.file('_errors.txt', `Failed files:\n${part.errors.map(error => `- ${error}`).join('\n')}`)
 
-  const blob = await part.zip.generateAsync({ type: 'blob' })
-  await downloadBlob(blob, createArchiveFilename(batch.profile.targetRoot, archiveIndex))
+  const base64 = await part.zip.generateAsync({ type: 'base64' })
+  await downloadDataUrl(`data:application/zip;base64,${base64}`, createArchiveFilename(batch.profile.targetRoot, archiveIndex))
 }
 
 function toManifestItem(item: DownloadItem): ZipManifestItem {
