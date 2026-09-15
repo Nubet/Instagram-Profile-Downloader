@@ -68,6 +68,7 @@ export async function getManifest() {
           browser_specific_settings: {
             gecko: {
               id: 'instabulk-downloader@norbertfila.com',
+              // @ts-expect-error: this new property is not yet included in webextension-polyfill types
               data_collection_permissions: {
                 required: ['none'],
               },
