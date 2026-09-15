@@ -68,6 +68,10 @@ export async function getManifest() {
           browser_specific_settings: {
             gecko: {
               id: 'instabulk-downloader@norbertfila.com',
+              data_collection_permissions: {
+                required: ['none'],
+              },
+              // Jeśli kiedyś zrobisz plik JSON do auto-aktualizacji z GitHuba, odkomentuj i wpisz tutaj:
               // update_url: 'https://nubet.github.io/InstaBulk-PostDownloader/updates.json',
             },
           },
