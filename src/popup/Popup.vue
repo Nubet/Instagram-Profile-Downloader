@@ -119,9 +119,15 @@ const selectedPosts = computed(() => {
 
 const selectedPostCount = computed(() => selectedPosts.value.length)
 
+const expandedPostId = ref<string | null>(null)
+
+function togglePostPreview(id: string) {
+  expandedPostId.value = expandedPostId.value === id ? null : id
+}
+
 const downloadSelectionLabel = computed(() => {
   if (selectionMode.value === 'all')
-    return 'Download ZIP)'
+    return 'Download All (ZIP)'
 
   return `Download ${selectedPostCount.value} (ZIP)`
 })
@@ -737,38 +743,60 @@ onBeforeUnmount(() => {
 
           <div class="max-h-[280px] overflow-y-auto overflow-x-hidden custom-scrollbar bg-white rounded-[14px] border border-[#e5e5ea] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
             <div class="divide-y divide-[#e5e5ea]">
-              <button
+              <div
                 v-for="(post, index) in posts"
                 :key="post.id"
-                class="w-full flex items-center gap-3.5 p-3 transition-colors hover:bg-[#f2f2f7]/60 text-left group"
+                class="w-full flex flex-col p-3 transition-colors hover:bg-[#f2f2f7]/60 text-left group cursor-pointer"
                 @click="toggleManualPost(post.id)"
               >
-                <div class="flex-shrink-0">
-                  <div
-                    class="w-[22px] h-[22px] rounded-full border transition-all flex items-center justify-center shadow-sm"
-                    :class="manualSelectionSet.has(post.id) ? 'bg-[#007aff] border-[#007aff]' : 'border-[#c7c7cc] bg-white group-hover:border-[#a1a1a6]'"
-                  >
-                    <PopupIcon v-if="manualSelectionSet.has(post.id)" name="check" class="text-white text-[14px]" />
+                <div class="flex items-center gap-3.5 w-full">
+                  <div class="flex-shrink-0">
+                    <div
+                      class="w-[22px] h-[22px] rounded-full border transition-all flex items-center justify-center shadow-sm"
+                      :class="manualSelectionSet.has(post.id) ? 'bg-[#007aff] border-[#007aff]' : 'border-[#c7c7cc] bg-white group-hover:border-[#a1a1a6]'"
+                    >
+                      <PopupIcon v-if="manualSelectionSet.has(post.id)" name="check" class="text-white text-[14px]" />
+                    </div>
+                  </div>
+
+                  <div class="w-11 h-11 rounded-[6px] overflow-hidden flex-shrink-0 bg-[#f2f2f7] border border-black/5 relative">
+                    <img :src="post.media[0]?.url" class="w-full h-full object-cover">
+                    <div v-if="post.media[0]?.type === 'video'" class="absolute bottom-[2px] right-[2px] bg-black/60 rounded-[3px] p-0.5 shadow-sm text-white text-[8px] font-bold uppercase tracking-widest px-1">
+                      Vid
+                    </div>
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[14px] font-medium text-[#1d1d1f]">Post {{ index + 1 }}</span>
+                      <span class="text-[10px] font-medium text-[#86868b] font-mono tracking-tight">{{ post.id }}</span>
+                    </div>
+                    <p v-if="expandedPostId !== post.id" class="text-[12px] text-[#86868b] truncate mt-0.5">
+                      {{ formatCaptionPreview(post.caption) }}
+                    </p>
+                  </div>
+
+                  <div class="flex-shrink-0 ml-1">
+                    <button
+                      class="p-1 rounded-full hover:bg-black/5 transition-colors text-[#86868b] hover:text-[#1d1d1f]"
+                      title="Toggle full caption"
+                      @click.stop="togglePostPreview(post.id)"
+                    >
+                      <PopupIcon
+                        name="chevron-down"
+                        class="text-[16px] transform transition-transform duration-200"
+                        :class="{ 'rotate-180': expandedPostId === post.id }"
+                      />
+                    </button>
                   </div>
                 </div>
 
-                <div class="w-11 h-11 rounded-[6px] overflow-hidden flex-shrink-0 bg-[#f2f2f7] border border-black/5 relative">
-                  <img :src="post.media[0]?.url" class="w-full h-full object-cover">
-                  <div v-if="post.media[0]?.type === 'video'" class="absolute bottom-[2px] right-[2px] bg-black/60 rounded-[3px] p-0.5 shadow-sm text-white text-[8px] font-bold uppercase tracking-widest px-1">
-                    Vid
+                <div v-if="expandedPostId === post.id" class="mt-3 pl-[36px] pr-2">
+                  <div class="text-[12px] text-[#1d1d1f] whitespace-pre-wrap leading-relaxed break-words bg-black/5 p-2.5 rounded-[8px]">
+                    {{ post.caption || 'No caption fetched.' }}
                   </div>
                 </div>
-
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between">
-                    <span class="text-[14px] font-medium text-[#1d1d1f]">Post {{ index + 1 }}</span>
-                    <span class="text-[10px] font-medium text-[#86868b] font-mono tracking-tight">{{ post.id }}</span>
-                  </div>
-                  <p class="text-[12px] text-[#86868b] truncate mt-0.5">
-                    {{ formatCaptionPreview(post.caption) }}
-                  </p>
-                </div>
-              </button>
+              </div>
             </div>
           </div>
         </div>
