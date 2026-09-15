@@ -14,6 +14,9 @@ describe('resolveProfileScrapeSettings', () => {
       scrollDelayRange: { min: 500, max: 900 },
       cooldownDelayRange: { min: 3000, max: 7000 },
       cooldownBatchSize: 12,
+      downloadImages: true,
+      downloadVideos: true,
+      downloadCaptions: true,
     })
   })
 
@@ -34,6 +37,9 @@ describe('resolveProfileScrapeSettings', () => {
       scrollDelayRange: { min: 600, max: 1800 },
       cooldownDelayRange: { min: 4000, max: 12000 },
       cooldownBatchSize: 20,
+      downloadImages: true,
+      downloadVideos: true,
+      downloadCaptions: true,
     })
   })
 })

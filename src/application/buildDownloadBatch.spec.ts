@@ -41,7 +41,7 @@ describe('buildDownloadBatch', () => {
           id: 'post-1:media:0',
           postId: 'post-1',
           kind: 'image',
-          path: 'nubet/post-1/image.jpg',
+          path: 'nubet/0001_post-1/image.jpg',
           source: {
             type: 'remote-url',
             value: 'https://cdn.example.com/post-1.jpg',
@@ -51,7 +51,7 @@ describe('buildDownloadBatch', () => {
           id: 'post-1:caption',
           postId: 'post-1',
           kind: 'caption',
-          path: 'nubet/post-1/caption.txt',
+          path: 'nubet/0001_post-1/caption.txt',
           source: {
             type: 'text',
             value: 'Caption text',
@@ -96,7 +96,7 @@ describe('buildDownloadBatch', () => {
         id: 'post-1:media:0',
         postId: 'post-1',
         kind: 'image',
-        path: 'nubet/post-1/image.jpg',
+        path: 'nubet/0001_post-1/image.jpg',
         source: {
           type: 'remote-url',
           value: 'https://cdn.example.com/post-1.jpg',
