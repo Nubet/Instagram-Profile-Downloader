@@ -121,9 +121,9 @@ const selectedPostCount = computed(() => selectedPosts.value.length)
 
 const downloadSelectionLabel = computed(() => {
   if (selectionMode.value === 'all')
-    return 'Download all'
+    return 'Download ZIP)'
 
-  return `Download ${selectedPostCount.value} post${selectedPostCount.value === 1 ? '' : 's'}`
+  return `Download ${selectedPostCount.value} (ZIP)`
 })
 
 const canDownloadSelection = computed(() => {
@@ -778,14 +778,14 @@ onBeforeUnmount(() => {
             v-if="selectionMode !== 'all'"
             class="btn rounded-[14px] px-4 py-3.5 text-[14px] font-semibold bg-[#f2f2f7] text-[#1d1d1f] hover:bg-[#e5e5ea] flex-shrink-0"
             :disabled="isBusy || hasActiveSession || !progress.sessionId || !hasFetchedPosts"
-            @click="selectionMode = 'all'; downloadSelectedPosts()"
+            @click="selectionMode = 'all'; downloadSelectedPosts('zip-archive')"
           >
-            Download All
+            All as ZIP
           </button>
           <button
             class="btn flex-1 rounded-[14px] px-4 py-3.5 text-[15px] font-semibold text-white bg-gradient-to-r from-[#fa7e1e] via-[#d62976] to-[#962fbf] shadow-[0_4px_14px_rgba(214,41,118,0.25)] hover:shadow-[0_6px_20px_rgba(214,41,118,0.35)] hover:-translate-y-[1px] flex justify-center items-center gap-2 relative overflow-hidden group"
             :disabled="!canDownloadSelection || isBusy"
-            @click="downloadSelectedPosts('individual-files')"
+            @click="downloadSelectedPosts('zip-archive')"
           >
             <div v-if="isBusy" class="absolute inset-0 bg-white/20 animate-shimmer" />
             <PopupIcon v-if="isBusy" name="loader" class="relative z-10 text-[18px]" />
@@ -795,9 +795,10 @@ onBeforeUnmount(() => {
           <button
             class="btn rounded-[14px] px-4 py-3.5 text-[14px] font-semibold bg-[#1d1d1f] text-white hover:bg-black flex-shrink-0"
             :disabled="!canDownloadSelection || isBusy"
-            @click="downloadSelectedPosts('zip-archive')"
+            title="Download as individual files"
+            @click="downloadSelectedPosts('individual-files')"
           >
-            Download ZIP
+            Individual files
           </button>
         </div>
       </section>
