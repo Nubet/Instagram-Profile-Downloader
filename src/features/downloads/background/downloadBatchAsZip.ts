@@ -1,7 +1,7 @@
 import JSZip from 'jszip'
-import type { DownloadBatch, DownloadBatchResult, DownloadItem, ScrapeFailure, ZipArchiveOptions } from '../domain/download'
+import type { DownloadBatch, DownloadBatchResult, DownloadItem, DownloadTraceEntry, ScrapeFailure, ZipArchiveOptions } from '../domain/download'
 import { defaultZipArchiveOptions } from '../domain/download'
-import { downloadDataUrl } from './downloadDataUrl'
+import { downloadAdapter } from './downloadAdapter'
 import { fetchDownloadItemContent } from './fetchDownloadItemContent'
 
 interface ZipManifestItem {
@@ -28,6 +28,7 @@ export async function downloadBatchAsZip(
   let downloadedFileCount = 0
   let failedItemCount = 0
   let firstFailure: ScrapeFailure | null = null
+  const trace: DownloadTraceEntry[] = []
 
   for (const item of batch.items) {
     try {
@@ -35,7 +36,7 @@ export async function downloadBatchAsZip(
 
       if (shouldStartNextArchive(part, content.sizeBytes, options)) {
         archiveCount += 1
-        await finalizeZipPart(batch, part, archiveCount)
+        await finalizeZipPart(batch, part, archiveCount, trace)
         part = createZipPartState()
       }
 
@@ -59,12 +60,13 @@ export async function downloadBatchAsZip(
 
   if (part.items.length > 0 || part.errors.length > 0) {
     archiveCount += 1
-    await finalizeZipPart(batch, part, archiveCount)
+    await finalizeZipPart(batch, part, archiveCount, trace)
   }
 
   return {
     downloadedFileCount,
     failure: firstFailure,
+    trace,
     archiveCount,
     failedItemCount,
   }
@@ -86,7 +88,7 @@ function shouldStartNextArchive(part: ZipPartState, nextItemBytes: number, optio
   return part.items.length >= options.maxArchiveItems || part.sizeBytes + nextItemBytes > options.maxArchiveBytes
 }
 
-async function finalizeZipPart(batch: DownloadBatch, part: ZipPartState, archiveIndex: number) {
+async function finalizeZipPart(batch: DownloadBatch, part: ZipPartState, archiveIndex: number, trace: DownloadTraceEntry[]) {
   part.zip.file('_manifest.json', JSON.stringify({
     profile: batch.profile.name,
     sessionId: batch.sessionId,
@@ -98,8 +100,8 @@ async function finalizeZipPart(batch: DownloadBatch, part: ZipPartState, archive
   if (part.errors.length > 0)
     part.zip.file('_errors.txt', `Failed files:\n${part.errors.map(error => `- ${error}`).join('\n')}`)
 
-  const base64 = await part.zip.generateAsync({ type: 'base64' })
-  await downloadDataUrl(`data:application/zip;base64,${base64}`, createArchiveFilename(batch.profile.targetRoot, archiveIndex))
+  const filename = createArchiveFilename(batch.profile.targetRoot, archiveIndex)
+  await downloadAdapter.downloadArchive(part.zip, filename, trace)
 }
 
 function toManifestItem(item: DownloadItem): ZipManifestItem {

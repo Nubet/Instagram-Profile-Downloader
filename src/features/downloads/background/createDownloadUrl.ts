@@ -22,7 +22,7 @@ export function createDownloadUrl(item: DownloadItem): CreatedDownloadUrl {
   }
 }
 
-function createBlobUrl(value: string, mimeType: string): CreatedDownloadUrl | null {
+export function createBlobUrl(value: BlobPart, mimeType: string): CreatedDownloadUrl | null {
   if (typeof Blob === 'undefined' || typeof URL.createObjectURL !== 'function')
     return null
 

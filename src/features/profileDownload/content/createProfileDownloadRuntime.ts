@@ -202,6 +202,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
         queuedItemCount: 0,
         downloadedFileCount: 0,
         failure: null,
+        trace: [],
       }
     }
 
@@ -217,6 +218,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
         queuedItemCount: 0,
         downloadedFileCount: 0,
         failure: null,
+        trace: [],
       }
     }
 
@@ -233,6 +235,9 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
       } as unknown as never,
       { context: 'background' } as never,
     ) as unknown as QueueDownloadBatchResponse
+
+    for (const entry of response.trace)
+      addDebugLog(entry.level, 'downloads', entry.message, entry.details)
 
     if (response.failure)
       addDebugLog('warn', 'downloads', 'Selected download completed with a warning.', response.failure.message)
@@ -260,6 +265,7 @@ export function createProfileDownloadRuntime(): ProfileDownloadRuntime {
       archiveCount: response.archiveCount,
       failedItemCount: response.failedItemCount,
       failure: response.failure,
+      trace: response.trace,
     }
   }
 

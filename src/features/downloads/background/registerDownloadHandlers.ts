@@ -19,6 +19,7 @@ export function registerDownloadHandlers() {
       archiveCount: result.archiveCount,
       failedItemCount: result.failedItemCount,
       failure: result.failure,
+      trace: result.trace,
     }
   })
 }

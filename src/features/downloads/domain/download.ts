@@ -22,8 +22,15 @@ export const defaultZipArchiveOptions: ZipArchiveOptions = {
 export interface DownloadBatchResult {
   downloadedFileCount: number
   failure: ScrapeFailure | null
+  trace: DownloadTraceEntry[]
   archiveCount?: number
   failedItemCount?: number
+}
+
+export interface DownloadTraceEntry {
+  level: 'info' | 'warn' | 'error'
+  message: string
+  details?: string
 }
 
 export interface DownloadItem {
