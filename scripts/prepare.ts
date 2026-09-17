@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process'
 import process from 'node:process'
 import fs from 'fs-extra'
 import chokidar from 'chokidar'
-import { browserOutDir, isDev, log, port, r } from './utils'
+import { browserOutDir, isDev, isFirefox, log, port, r } from './utils'
 
 async function copyAssets() {
   await fs.copy(r('assets'), r(`${browserOutDir}/assets`))
@@ -10,7 +10,7 @@ async function copyAssets() {
 }
 
 async function stubIndexHtml() {
-  const views = ['popup']
+  const views = ['popup', ...(isFirefox ? ['downloads'] : [])]
 
   for (const view of views) {
     await fs.ensureDir(r(`${browserOutDir}/dist/${view}`))
