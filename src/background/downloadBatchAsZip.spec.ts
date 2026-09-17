@@ -2,19 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { downloadBatchAsZip } from '~/features/downloads/background/downloadBatchAsZip'
 import type { DownloadBatch } from '~/features/downloads/domain/download'
 
-const download = vi.hoisted(() => vi.fn(async () => 1))
+const downloadArchive = vi.hoisted(() => vi.fn(async () => undefined))
 
-vi.mock('webextension-polyfill', () => ({
-  default: {
-    downloads: {
-      download,
-    },
+vi.mock('~/features/downloads/background/downloadAdapter', () => ({
+  downloadAdapter: {
+    downloadArchive,
   },
 }))
 
 describe('downloadBatchAsZip', () => {
   beforeEach(() => {
-    download.mockClear()
+    downloadArchive.mockClear()
     vi.restoreAllMocks()
 
     Object.defineProperty(URL, 'createObjectURL', {
@@ -42,9 +40,12 @@ describe('downloadBatchAsZip', () => {
       failedItemCount: 0,
       failure: null,
     })
-    expect(download).toHaveBeenCalledTimes(2)
-    expect(download).toHaveBeenNthCalledWith(1, expect.objectContaining({ filename: expect.stringMatching(/^nubet_\d{4}-\d{2}-\d{2}_part-001\.zip$/) }))
-    expect(download).toHaveBeenNthCalledWith(2, expect.objectContaining({ filename: expect.stringMatching(/^nubet_\d{4}-\d{2}-\d{2}_part-002\.zip$/) }))
+    expect(downloadArchive).toHaveBeenCalledTimes(2)
+    const calls = downloadArchive.mock.calls as unknown[][]
+    expect(calls[0]?.[1]).toMatch(/^nubet_\d{4}-\d{2}-\d{2}_part-001\.zip$/)
+    expect(calls[1]?.[1]).toMatch(/^nubet_\d{4}-\d{2}-\d{2}_part-002\.zip$/)
+    expect(calls[0]?.[2]).toEqual(expect.any(Array))
+    expect(calls[1]?.[2]).toEqual(expect.any(Array))
   })
 
   it('keeps packing when a remote item fails', async () => {
@@ -61,7 +62,7 @@ describe('downloadBatchAsZip', () => {
       failedItemCount: 1,
     })
     expect(result.failure?.postId).toBe('post-1')
-    expect(download).toHaveBeenCalledTimes(1)
+    expect(downloadArchive).toHaveBeenCalledTimes(1)
   })
 })
 
