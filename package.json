@@ -37,6 +37,7 @@
     "pack:xpi:run": "cross-env WEB_EXT_ARTIFACTS_DIR=./ web-ext build --source-dir ./extension-firefox --filename extension.xpi --overwrite-dest",
     "release:verify": "esno scripts/release.ts verify",
     "release:artifacts": "esno scripts/release.ts artifacts",
+    "release:sign-firefox": "esno scripts/release.ts sign-firefox",
     "release:tag": "esno scripts/release.ts tag",
     "release:hook": "esno scripts/release.ts hook",
     "start:chromium": "cross-env NODE_ENV=production EXTENSION=chromium run-s clear:chromium build:web build:prepare build:background build:js start:chromium:run",

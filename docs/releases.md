@@ -23,6 +23,12 @@ Important:
 - If `pnpm version patch` already created the tag, `pnpm release:tag` will fail with `Git tag vX.Y.Z already exists.` This is expected. In that case, just use `git push` and `git push --tags`.
 - The tag must match the version in `package.json`.
 - Release files appear only if GitHub Actions passes.
+- Firefox releases are submitted to addons.mozilla.org as listed versions and
+  the signed XPI is attached to the GitHub Release.
+- Configure `AMO_API_KEY` and `AMO_API_SECRET` as GitHub Actions secrets before
+  pushing a release tag.
+- Mozilla review can keep the workflow waiting or fail it if approval does not
+  finish within the configured timeout.
 
 Artifacts:
 

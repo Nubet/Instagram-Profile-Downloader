@@ -9,6 +9,7 @@ import { log, r } from './utils'
 
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9a-z.-]+)?(?:\+[0-9a-z.-]+)?$/i
 const artifactsDir = r('release')
+const firefoxAmoArtifactsDir = r('amo-artifacts')
 
 interface ReleaseContext {
   artifactBaseName: string
@@ -16,13 +17,14 @@ interface ReleaseContext {
   version: string
 }
 
-function run(command: string, args: string[]) {
+function run(command: string, args: string[], env?: NodeJS.ProcessEnv) {
   const commandLine = [command, ...args]
     .map(arg => arg.includes(' ') ? JSON.stringify(arg) : arg)
     .join(' ')
 
   execSync(commandLine, {
     cwd: r(),
+    env,
     shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh',
     stdio: 'inherit',
   })
@@ -112,6 +114,58 @@ async function createArtifacts() {
     log('REL', 'skipped CRX artifact because CHROME_EXTENSION_KEY is not set')
 }
 
+async function signFirefox() {
+  const context = await getReleaseContext()
+  validateVersion(context)
+
+  const apiKey = process.env.AMO_API_KEY?.trim()
+  const apiSecret = process.env.AMO_API_SECRET?.trim()
+  assert(apiKey && apiSecret, 'AMO_API_KEY and AMO_API_SECRET are required to sign the Firefox release.')
+
+  await fs.emptyDir(firefoxAmoArtifactsDir)
+  const sourceDir = await fs.mkdtemp(join(tmpdir(), 'instabulk-source-'))
+  const sourceArchive = join(sourceDir, `${context.artifactBaseName}-source.zip`)
+
+  try {
+    run('git', ['archive', '--format=zip', `--output=${sourceArchive}`, 'HEAD'])
+    run('pnpm', [
+      'exec',
+      'web-ext',
+      'sign',
+      '--source-dir',
+      r('extension-firefox'),
+      '--artifacts-dir',
+      firefoxAmoArtifactsDir,
+      '--channel',
+      'listed',
+      '--no-input',
+      '--timeout',
+      '1200000',
+      '--approval-timeout',
+      '900000',
+      '--upload-source-code',
+      sourceArchive,
+    ], {
+      ...process.env,
+      WEB_EXT_API_KEY: apiKey,
+      WEB_EXT_API_SECRET: apiSecret,
+    })
+
+    const signedArtifacts = (await fs.readdir(firefoxAmoArtifactsDir))
+      .filter(file => file.endsWith('.xpi'))
+    assert(signedArtifacts.length === 1, `Expected one signed Firefox XPI, found ${signedArtifacts.length}.`)
+
+    const signedArtifact = join(firefoxAmoArtifactsDir, signedArtifacts[0]!)
+    const target = r('release', `${context.artifactBaseName}-firefox.xpi`)
+    await fs.copyFile(signedArtifact, target)
+    log('REL', `replaced release/${context.artifactBaseName}-firefox.xpi with the AMO-signed artifact`)
+  }
+  finally {
+    await fs.remove(sourceDir)
+    await fs.remove(firefoxAmoArtifactsDir)
+  }
+}
+
 function gitTagExists(tagName: string) {
   const output = execFileSync('git', ['tag', '-l', tagName], {
     cwd: r(),
@@ -187,10 +241,11 @@ async function runPrePushHook() {
 const command = process.argv[2]
 
 const commands: Record<string, () => Promise<void>> = {
-  artifacts: createArtifacts,
-  hook: runPrePushHook,
-  tag: createTag,
-  verify: async () => validateVersion(await getReleaseContext()),
+  'artifacts': createArtifacts,
+  'hook': runPrePushHook,
+  'tag': createTag,
+  'sign-firefox': signFirefox,
+  'verify': async () => validateVersion(await getReleaseContext()),
 }
 
 assert(command && command in commands, `Unknown release command: ${command || '<empty>'}`)

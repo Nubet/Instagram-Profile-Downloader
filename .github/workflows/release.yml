@@ -43,6 +43,12 @@ jobs:
         env:
           CHROME_EXTENSION_KEY: ${{ secrets.CHROME_EXTENSION_KEY }}
 
+      - name: Submit and sign Firefox release on AMO
+        run: pnpm release:sign-firefox
+        env:
+          AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
+          AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
