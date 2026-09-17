@@ -6,7 +6,7 @@ import { defineConfig } from 'vite'
 import Vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import UnoCSS from 'unocss/vite'
-import { browserOutDir, isDev, port, r } from './scripts/utils'
+import { browserOutDir, isDev, isFirefox, port, r } from './scripts/utils'
 import packageJson from './package.json'
 
 export const sharedConfig: UserConfig = {
@@ -18,6 +18,7 @@ export const sharedConfig: UserConfig = {
   },
   define: {
     __DEV__: isDev,
+    __IS_FIREFOX__: isFirefox,
     __NAME__: JSON.stringify(packageJson.name),
   },
   plugins: [
@@ -74,6 +75,8 @@ export default defineConfig(({ command }) => ({
     rollupOptions: {
       input: {
         popup: r('src/popup/index.html'),
+        // Firefox needs this page for locally generated files
+        ...(isFirefox ? { downloads: r('src/downloads/index.html') } : {}),
       },
     },
   },
