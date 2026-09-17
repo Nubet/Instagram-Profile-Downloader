@@ -14,6 +14,9 @@ Load `extension-chromium/` or `extension-firefox/` as an unpacked extension.
 
 Each browser builds to its own directory.
 
+See [Browser Download Adapters](download-adapters.md) for the browser-specific
+download architecture and troubleshooting notes.
+
 | Command | Target | Output |
 |---|---|---|
 | `pnpm build:chromium` | Chrome | `extension-chromium/` |
