@@ -139,6 +139,8 @@ async function signFirefox() {
       '--channel',
       'listed',
       '--no-input',
+      '--amo-metadata',
+      r('amo-metadata.json'),
       '--timeout',
       '1200000',
       '--approval-timeout',
