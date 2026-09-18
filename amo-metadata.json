@@ -1,4 +1,9 @@
 {
+  "categories": {
+    "firefox": [
+      "download-management"
+    ]
+  },
   "version": {
     "license": "MIT"
   }
