@@ -1,11 +1,11 @@
 {
   "name": "instabulk-profile-downloader",
-  "displayName": "InstaBulk Profile Downloader",
+  "displayName": "InstaBulk - Instagram Profile Downloader",
   "version": "0.0.14",
   "private": true,
   "packageManager": "pnpm@9.7.1",
   "description": "Browser extension for downloading public Instagram profile posts.",
-  "author": "Norbert Fila <contact@norbertfila.com>",
+  "author": "Norbert Fila <kontakt@norbertfila.com>",
   "license": "MIT",
   "homepage": "https://norbertfila.com",
   "repository": {
